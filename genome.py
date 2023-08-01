@@ -30,8 +30,6 @@ class FingersGenome:
         Columns describe each finger with list of phalanges
         '''
 
-        print(f'Gene_len {self.gene_len}')
-
         self.genome_matrix = np.zeros(
             (self.max_fingers, self.max_phalanges, self.gene_len), dtype=np.float64
         )
@@ -66,7 +64,7 @@ class BrainGenome:
         Object class (type of target object):
             numbers from 1 (For the scope of this project, manually assigned)
         Action:
-            pickup / drop (0 / 1)
+            pickup / drop (1 / 2)
         Genome matrix:
             Gives the brain information about fingers' anatomy it is supposed to control.
             The genome matrix has the shape (7, 10, 9)
