@@ -10,10 +10,10 @@ from constants import GeneDesc
 class FingersGenomeTest(unittest.TestCase):
     @given(values=st.floats(min_value=0.0, max_value=1.0))
     def test_random_genome_matrix(self, values):
-        finger_genome = FingersGenome(GeneDesc).get_genome()
-        assert isinstance(finger_genome, np.ndarray)
-        assert finger_genome.shape == (7, 10, 9)
-        assert np.all((finger_genome >= 0) & (finger_genome < 1))
+        fingers_genome = FingersGenome(GeneDesc).get_genome()
+        assert isinstance(fingers_genome, np.ndarray)
+        assert fingers_genome.shape == (7, 10, 9)
+        assert np.all((fingers_genome >= 0) & (fingers_genome < 1))
 
 
 if __name__ == '__main__':

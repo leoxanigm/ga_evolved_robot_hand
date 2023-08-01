@@ -30,6 +30,8 @@ class FingersGenome:
         Columns describe each finger with list of phalanges
         '''
 
+        print(f'Gene_len {self.gene_len}')
+
         self.genome_matrix = np.zeros(
             (self.max_fingers, self.max_phalanges, self.gene_len), dtype=np.float64
         )
@@ -120,9 +122,3 @@ class BrainGenome:
                 genome_array.append(np_rand_biases)
 
         self.genome_array = genome_array
-
-
-from constants import GeneDesc
-
-genome = FingersGenome(GeneDesc).get_genome()
-print(genome.shape)
