@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 import copy
 import os
+import numpy as np
 
 from constants import GeneDesc
 from helpers.math_functions import calculate_box_mass, moments_of_inertia_box
@@ -12,22 +13,23 @@ from phenome import FingersPhenome
 class GenerateURDF:
     '''
     Generates URDF robot file from genome data
+
+    Args:
+        genome_data: fingers genome matrix
     '''
 
     def __init__(self, genome_data):
-        '''
-        Params:
-            gene_data: numpy array of genome data
-            dom: already imported robot file, the file would already have link and joints
-                for the robot arm
-        '''
         self.genome_data = genome_data
 
     def generate_robot_fingers(self, robot_hand_file, output_file):
         '''
         Adds finger links and joint to a robot hand
-        Params:
-            robot_hand: base robot urdf file
+
+        Args:
+            robot_hand: base robot URDF file
+
+        Returns:
+            bool
         '''
         if not os.path.exists(robot_hand_file):
             raise FileNotFoundError('Can not read the robot base urdf file.')
@@ -37,9 +39,9 @@ class GenerateURDF:
         try:
             robot_hand.parse(robot_hand_file)
         except ET.ParseError:
-            raise 'Could not parse urdf file, please check that it is properly formatted.'
+            raise 'Could not parse URDF file, please check that it is properly formatted.'
         except:
-            raise 'Could not parse urdf file, unknown error.'
+            raise 'Could not parse URDF file, unknown error.'
 
         xml_root = robot_hand.getroot()
 
@@ -56,7 +58,7 @@ class GenerateURDF:
         for i in range(len(self.genome_data)):  # loop through fingers
             finger = self.genome_data[i]
 
-            if finger is None:
+            if np.all(finger == 0):
                 # No need to continue looping are the rest of array elements will be None
                 break
 
@@ -65,7 +67,7 @@ class GenerateURDF:
             for j in range(len(finger)):  # loop through phalanges
                 phalanx = self.genome_data[i][j]
 
-                if phalanx is None:
+                if np.all(phalanx == 0):
                     break
 
                 assert len(phalanx) == len(GeneDesc)
@@ -213,9 +215,3 @@ class GenerateURDF:
         joint_tag.append(joint_limit_tag)
 
         return joint_tag
-
-genome = FingersGenome(GeneDesc).get_genome()
-# print(genome)
-phenome = FingersPhenome(genome, GeneDesc, 'robot_hand.urdf')
-urdf = GenerateURDF(phenome.get_genome())
-urdf.generate_robot_fingers('robot_hand.urdf', 'robot_1.urdf')

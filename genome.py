@@ -7,6 +7,12 @@ class FingersGenome:
     Genome is a 7 column by 10 row matrix. Each cell contains genotype info
     for a phalanx. If there is an array of random floats, there exists a phalanx
     if there is a 0, there is no data. Hence, no phenotype will be generated.
+
+    Args:
+        gene_description (Enum): attributes for a typical phalanx. Defined
+            in the constants.py file
+        rows: maximum number of fingers
+        columns: maximum number of phalanges
     '''
 
     def __init__(self, gene_description, rows=7, columns=10):
@@ -17,7 +23,7 @@ class FingersGenome:
         self.genome_matrix = None
 
     def get_genome(self):
-        # initialize genome
+        '''Returns random fingers genome matrix'''
         self.__set_default_matrix()
         self.__generate_rand_fingers()
 
@@ -71,18 +77,18 @@ class BrainGenome:
 
     The outputs will be rotation angles for each phalanx. The number of output is 70, as
     there can be a maximum of 70 phalanges in the 7 by 10 genome matrix.
+
+    Args:
+        no_of_inputs: The number of input neurons. Default is 638 for (2, 3)
+            shape target object bounding box, (1, ) shape object class, (1, )
+            shape action and (7, 10, 9) shape genome matrix
+        layers: A list containing the number of neurons for the hidden layers.
+            Default is for a neural network with 3 hidden layers of 52
+            neurons each.
+        no_of_outputs: rotation angles for each phalanx. Default is 70
     '''
 
     def __init__(self, no_of_inputs=638, layers=[52, 52, 52], no_of_outputs=70):
-        '''
-        Params:
-            no_of_inputs: The number of input neurons. Default is 638 for (2, 3) shape
-                            target object bounding box, (1, ) shape object class, (1, )
-                            shape action and (7, 10, 9) shape genome matrix
-            layers: A list containing the number of neurons for the hidden layers. Default
-                    is for a neural network with 3 hidden layers of 52 neurons each.
-            no_of_outputs: rotation angles for each phalanx. Default is 70
-        '''
         self.no_of_inputs = no_of_inputs
         self.layers = layers
         self.no_of_outputs = no_of_outputs
@@ -90,15 +96,17 @@ class BrainGenome:
         self.genome_array = None
 
     def get_genome(self):
-        # initialize genome
+        '''Returns random brain genome array'''
         self.__generate_default_genome_array()
 
         return self.genome_array
 
     def __generate_default_genome_array(self):
         '''
-        Returns a list of numpy arrays with shapes defined by inputs, hidden layers and outputs.
-        The numpy arrays represent weights and biases.
+        Returns a list of numpy arrays with shapes defined by inputs,
+        hidden layers and outputs. The numpy arrays represent weights and biases.
+        For the default configuration, it returns a random float array with
+        shape: [(52, 638), (52,), (52, 52), (52,), (52, 52), (52,), (70, 52), (70,)]
         '''
         assert type(self.layers) == list
 
