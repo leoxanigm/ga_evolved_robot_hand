@@ -188,14 +188,18 @@ class BrainPhenome:
         self.optimizer = optim.SGD(self.model.parameters(), lr=0.001)
         self.epochs = 10
 
-        self.contact_distances = [] # Distance of each phalanx from target object
+        self.contact_distances = []  # Distance of each phalanx from target object
 
-    def train(self, object_loc, object_class, action, fingers_genome=None):
+    def train(
+        self, object_loc, object_class, action, set_rotation_angles, fingers_genome=None
+    ):
         '''
         Args:
             object_loc (list): bounding box or target object. Shape = (2, 3)
             object_class (int): class for the target object. Starts from 1
             action (integer): pick up or drop object, either 1 or 2, respectively
+            set_rotation_angles (function): a callback function to send rotation
+                angles to the specimen
             fingers_genome (numpy array): genome encoding for fingers
         '''
         if fingers_genome is None:
@@ -206,11 +210,18 @@ class BrainPhenome:
         # Import the genome to the model
         self.__genome_to_model()
 
+        # Train brain.
+        # Duding the raining process, the brain sends phalanges rotation output and
+        # receives their contact distances with the target object as to use in the
+        # loss function
         for _ in range(self.epochs):
             self.model.train()
 
             # Calculate the rotation angle for each phalanx
             pred_angles = self.model(input)
+
+            # Send calculated rotation angles to the specimen
+            set_rotation_angles(pred_angles.tolist())
 
             loss = self.__loss_fn(self.contact_distances)
 
@@ -236,7 +247,7 @@ class BrainPhenome:
 
         self.model.load_state_dict(torch.load(file_path))
         self.model.eval()
-    
+
     def set_contact_distances(self, contact_distances):
         self.contact_distances = contact_distances
 
@@ -253,7 +264,7 @@ class BrainPhenome:
         Args:
             contact_distance (list(float)): list of distance of phalanges from the target
                             object. This is calculated from PyBullet's getContactPoints
-        
+
         Returns:
             scalar loss tensor
         '''
@@ -292,7 +303,9 @@ class BrainPhenome:
         assert isinstance(fingers_genome, np.ndarray)
         fingers_genome = np.reshape(fingers_genome, (np.prod(fingers_genome.shape),))
 
-        flat_np_array = np.concatenate((object_loc, object_class, action, fingers_genome))
+        flat_np_array = np.concatenate(
+            (object_loc, object_class, action, fingers_genome)
+        )
 
         return torch.from_numpy(flat_np_array)
 
