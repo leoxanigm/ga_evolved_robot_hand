@@ -17,3 +17,6 @@ class Limits:
     DIM_X_UPPER = DIM_Y_UPPER = 0.05 # 5cm
     DIM_Z_LOWER = 0.01 # 1cm
     DIM_Z_UPPER = 0.1 # 20cm
+
+# The PyBullet body index of the first finger, excluding the robot arm
+FINGER_START_INDEX = 4

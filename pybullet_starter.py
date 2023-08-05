@@ -2,8 +2,12 @@ import pybullet as p
 import pybullet_data as pd
 import numpy as np
 import time
+import sys
 
-p.connect(p.GUI)
+if len(sys.argv) == 2 and sys.argv[1] == 'DIRECT':
+    p.connect(p.DIRECT)
+else:
+    p.connect(p.GUI)
 
 # Config
 p.setPhysicsEngineParameter(enableFileCaching=0)

@@ -47,7 +47,8 @@
       <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01" />
     </inertial>
   </link>
-  <joint name="support_joint" type="continuous">
+  <!-- <joint name="support_joint" type="continuous"> -->
+  <joint name="support_joint" type="fixed">
     <origin xyz="0 0 0.5" rpy="0 0 0" />
     <parent link="base_link" />
     <child link="support_link" />
@@ -73,7 +74,8 @@
       <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01" />
     </inertial>
   </link>
-  <joint name="arm_joint" type="revolute">
+  <!-- <joint name="arm_joint" type="revolute"> -->
+  <joint name="arm_joint" type="fixed">
     <origin xyz="-0.1 0 1" rpy="0 0 0" />
     <parent link="support_link" />
     <child link="arm_link" />
@@ -128,7 +130,7 @@
     <parent link="wrist_link" />
     <child link="palm_link" />
   </joint>
-  <link name="link_0_0">
+  <link name="finger_link_0_0">
     <visual>
       <origin xyz="0 0 0.039" rpy="0 0 0" />
       <geometry>
@@ -145,14 +147,14 @@
       <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
     </inertial>
   </link>
-  <joint name="joint_palm_link_to_link_0_0" type="revolute">
+  <joint name="joint_palm_link_to_finger_link_0_0" type="revolute">
     <origin xyz="-0.086 0.125 0.1" rpy="0 0 0" />
     <parent link="palm_link" />
-    <child link="link_0_0" />
+    <child link="finger_link_0_0" />
     <axis xyz="0.404 0.77 0.32" />
     <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
   </joint>
-  <link name="link_0_1">
+  <link name="finger_link_0_1">
     <visual>
       <origin xyz="0 0 0.03" rpy="0 0 0" />
       <geometry>
@@ -169,14 +171,14 @@
       <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
     </inertial>
   </link>
-  <joint name="joint_link_0_0_to_link_0_1" type="revolute">
+  <joint name="joint_finger_link_0_0_to_finger_link_0_1" type="revolute">
     <origin xyz="0.0 0.0 0.078" rpy="0 0 0" />
-    <parent link="link_0_0" />
-    <child link="link_0_1" />
+    <parent link="finger_link_0_0" />
+    <child link="finger_link_0_1" />
     <axis xyz="0.811 0.108 0.521" />
     <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
   </joint>
-  <link name="link_0_2">
+  <link name="finger_link_0_2">
     <visual>
       <origin xyz="0 0 0.0125" rpy="0 0 0" />
       <geometry>
@@ -193,14 +195,14 @@
       <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
     </inertial>
   </link>
-  <joint name="joint_link_0_1_to_link_0_2" type="revolute">
+  <joint name="joint_finger_link_0_1_to_finger_link_0_2" type="revolute">
     <origin xyz="0.0 0.0 0.06" rpy="0 0 0" />
-    <parent link="link_0_1" />
-    <child link="link_0_2" />
+    <parent link="finger_link_0_1" />
+    <child link="finger_link_0_2" />
     <axis xyz="0.904 0.073 0.923" />
     <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
   </joint>
-  <link name="link_0_3">
+  <link name="finger_link_0_3">
     <visual>
       <origin xyz="0 0 0.0285" rpy="0 0 0" />
       <geometry>
@@ -217,14 +219,14 @@
       <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
     </inertial>
   </link>
-  <joint name="joint_link_0_2_to_link_0_3" type="revolute">
+  <joint name="joint_finger_link_0_2_to_finger_link_0_3" type="revolute">
     <origin xyz="0.0 0.0 0.025" rpy="0 0 0" />
-    <parent link="link_0_2" />
-    <child link="link_0_3" />
+    <parent link="finger_link_0_2" />
+    <child link="finger_link_0_3" />
     <axis xyz="0.7 0.169 0.557" />
     <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
   </joint>
-  <link name="link_0_4">
+  <link name="finger_link_0_4">
     <visual>
       <origin xyz="0 0 0.016" rpy="0 0 0" />
       <geometry>
@@ -241,14 +243,14 @@
       <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
     </inertial>
   </link>
-  <joint name="joint_link_0_3_to_link_0_4" type="revolute">
+  <joint name="joint_finger_link_0_3_to_finger_link_0_4" type="revolute">
     <origin xyz="0.0 0.0 0.057" rpy="0 0 0" />
-    <parent link="link_0_3" />
-    <child link="link_0_4" />
+    <parent link="finger_link_0_3" />
+    <child link="finger_link_0_4" />
     <axis xyz="0.898 0.816 0.407" />
     <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
   </joint>
-  <link name="link_0_5">
+  <link name="finger_link_0_5">
     <visual>
       <origin xyz="0 0 0.0275" rpy="0 0 0" />
       <geometry>
@@ -265,14 +267,14 @@
       <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
     </inertial>
   </link>
-  <joint name="joint_link_0_4_to_link_0_5" type="revolute">
+  <joint name="joint_finger_link_0_4_to_finger_link_0_5" type="revolute">
     <origin xyz="0.0 0.0 0.032" rpy="0 0 0" />
-    <parent link="link_0_4" />
-    <child link="link_0_5" />
+    <parent link="finger_link_0_4" />
+    <child link="finger_link_0_5" />
     <axis xyz="0.785 0.339 0.425" />
     <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
   </joint>
-  <link name="link_0_6">
+  <link name="finger_link_0_6">
     <visual>
       <origin xyz="0 0 0.0125" rpy="0 0 0" />
       <geometry>
@@ -289,14 +291,14 @@
       <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
     </inertial>
   </link>
-  <joint name="joint_link_0_5_to_link_0_6" type="revolute">
+  <joint name="joint_finger_link_0_5_to_finger_link_0_6" type="revolute">
     <origin xyz="0.0 0.0 0.055" rpy="0 0 0" />
-    <parent link="link_0_5" />
-    <child link="link_0_6" />
+    <parent link="finger_link_0_5" />
+    <child link="finger_link_0_6" />
     <axis xyz="0.419 0.282 0.844" />
     <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
   </joint>
-  <link name="link_0_7">
+  <link name="finger_link_0_7">
     <visual>
       <origin xyz="0 0 0.0115" rpy="0 0 0" />
       <geometry>
@@ -313,14 +315,14 @@
       <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
     </inertial>
   </link>
-  <joint name="joint_link_0_6_to_link_0_7" type="revolute">
+  <joint name="joint_finger_link_0_6_to_finger_link_0_7" type="revolute">
     <origin xyz="0.0 0.0 0.025" rpy="0 0 0" />
-    <parent link="link_0_6" />
-    <child link="link_0_7" />
+    <parent link="finger_link_0_6" />
+    <child link="finger_link_0_7" />
     <axis xyz="0.996 0.958 0.288" />
     <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
   </joint>
-  <link name="link_0_8">
+  <link name="finger_link_0_8">
     <visual>
       <origin xyz="0 0 0.037" rpy="0 0 0" />
       <geometry>
@@ -337,14 +339,14 @@
       <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
     </inertial>
   </link>
-  <joint name="joint_link_0_7_to_link_0_8" type="revolute">
+  <joint name="joint_finger_link_0_7_to_finger_link_0_8" type="revolute">
     <origin xyz="0.0 0.0 0.023" rpy="0 0 0" />
-    <parent link="link_0_7" />
-    <child link="link_0_8" />
+    <parent link="finger_link_0_7" />
+    <child link="finger_link_0_8" />
     <axis xyz="0.706 0.774 0.224" />
     <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
   </joint>
-  <link name="link_1_0">
+  <link name="finger_link_1_0">
     <visual>
       <origin xyz="0 0 0.016" rpy="0 0 0" />
       <geometry>
@@ -361,14 +363,14 @@
       <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
     </inertial>
   </link>
-  <joint name="joint_palm_link_to_link_1_0" type="revolute">
+  <joint name="joint_palm_link_to_finger_link_1_0" type="revolute">
     <origin xyz="-0.125 0.02 0.1" rpy="0 0 0" />
     <parent link="palm_link" />
-    <child link="link_1_0" />
+    <child link="finger_link_1_0" />
     <axis xyz="0.458 0.132 0.81" />
     <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
   </joint>
-  <link name="link_1_1">
+  <link name="finger_link_1_1">
     <visual>
       <origin xyz="0 0 0.0405" rpy="0 0 0" />
       <geometry>
@@ -385,14 +387,14 @@
       <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
     </inertial>
   </link>
-  <joint name="joint_link_1_0_to_link_1_1" type="revolute">
+  <joint name="joint_finger_link_1_0_to_finger_link_1_1" type="revolute">
     <origin xyz="0.0 0.0 0.032" rpy="0 0 0" />
-    <parent link="link_1_0" />
-    <child link="link_1_1" />
+    <parent link="finger_link_1_0" />
+    <child link="finger_link_1_1" />
     <axis xyz="0.467 0.863 0.894" />
     <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
   </joint>
-  <link name="link_1_2">
+  <link name="finger_link_1_2">
     <visual>
       <origin xyz="0 0 0.0195" rpy="0 0 0" />
       <geometry>
@@ -409,14 +411,14 @@
       <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
     </inertial>
   </link>
-  <joint name="joint_link_1_1_to_link_1_2" type="revolute">
+  <joint name="joint_finger_link_1_1_to_finger_link_1_2" type="revolute">
     <origin xyz="0.0 0.0 0.081" rpy="0 0 0" />
-    <parent link="link_1_1" />
-    <child link="link_1_2" />
+    <parent link="finger_link_1_1" />
+    <child link="finger_link_1_2" />
     <axis xyz="0.341 0.41 0.322" />
     <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
   </joint>
-  <link name="link_1_3">
+  <link name="finger_link_1_3">
     <visual>
       <origin xyz="0 0 0.0235" rpy="0 0 0" />
       <geometry>
@@ -433,10 +435,10 @@
       <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
     </inertial>
   </link>
-  <joint name="joint_link_1_2_to_link_1_3" type="revolute">
+  <joint name="joint_finger_link_1_2_to_finger_link_1_3" type="revolute">
     <origin xyz="0.0 0.0 0.039" rpy="0 0 0" />
-    <parent link="link_1_2" />
-    <child link="link_1_3" />
+    <parent link="finger_link_1_2" />
+    <child link="finger_link_1_3" />
     <axis xyz="0.994 0.563 0.56" />
     <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
   </joint>
