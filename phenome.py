@@ -224,6 +224,7 @@ class BrainPhenome:
         self.model_layers = torch.load(file_path)
 
 # genome = BrainGenome()
+# print(genome.get_genome())
 # phenome = BrainPhenome(genome)
 # print(phenome.move([1.2, 1, 0, 0, 2.7]))
 # phenome.save_model('test_2.pt')

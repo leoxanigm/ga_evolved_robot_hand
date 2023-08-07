@@ -10,7 +10,7 @@ from constants import GeneDesc
 
 class Specimen:
     '''
-    Defines the specimen and makes it ready for simulation.
+    Defines a specimen and makes it ready for simulation.
 
     Args:
         gene_description (Enum): GeneDesc enum class
@@ -21,11 +21,14 @@ class Specimen:
     id = None
     fingers = None
     brain = None
-    finger_positions = None
     specimen_URDF = None
+    fitness = 0
+    distances = []  # distance of each phalanx in the fingers from the target object
 
     def __init__(self, gene_description, robot_hand):
+        # Phalanx gene description Enum
         self.gene_desc = gene_description
+        # URDF robot hand file. This contains the palm the fingers will be attached to
         self.robot_hand = robot_hand
 
         # Assign a unique id
@@ -58,13 +61,10 @@ class Specimen:
 
     def __init_brain(self):
         # Initialize specimen brain
-        brain_genome = BrainGenome().get_genome()
-        self.brain = BrainPhenome(self.fingers, brain_genome)
+        brain_genome = BrainGenome()
+        self.brain = BrainPhenome(brain_genome)
 
-    def train_brain(self):
-        self.brain.train([[0.1, 0.06, 1.2], [0.2, 0.16, 1.7]], 1, 1, self.move_fingers)
-
-    def move_fingers(self, target_angles):
+    def move_fingers(self, distances):
         '''
         Moves the fingers to the specified target angles.
 
@@ -79,4 +79,22 @@ class Specimen:
         return my_arr.tolist()
 
     def calc_fitness(self):
-        pass
+        assert len(self.distances) == self.num_of_phalanges
+
+        # Calculate mean-square fitness from distance of the phalanges
+        # from the target object
+        self.fitness = np.mean(np.square(self.distances))
+
+    @property
+    def num_of_phalanges(self):
+        finger_count = 0
+        for finger in self.fingers:  # loop through fingers
+            if np.all(finger == 0):
+                # No need to continue looping are the rest of array elements will be None
+                break
+
+            for phalanx in finger:  # loop through phalanges
+                if np.all(phalanx == 0):
+                    break
+
+                finger_count += 0
