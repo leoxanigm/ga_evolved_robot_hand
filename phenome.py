@@ -8,6 +8,7 @@ import torch.optim as optim
 
 from constants import GeneDesc, Limits
 from helpers.math_functions import normalize
+from genome import BrainGenome
 
 
 class FingersPhenome:
@@ -166,173 +167,65 @@ class BrainPhenome:
     Interprets genome brain array to a neural network that can be trained
 
     Args:
-        fingers_genome: fingers genome matrix
-        brain_genome: brain genome array
+        brain_genome: brain genome object
     '''
 
-    def __init__(
-        self,
-        fingers_genome,
-        brain_genome,
-        no_of_inputs=638,
-        layers=[52, 52, 52],
-        no_of_outputs=70,
-    ):
-        self.fingers_genome = fingers_genome
-        self.brain_genome = brain_genome
-        self.no_of_inputs = no_of_inputs
-        self.layers = layers
-        self.no_of_outputs = no_of_outputs
+    def __init__(self, brain_genome: BrainGenome):
+        assert isinstance(brain_genome, BrainGenome)
 
-        self.model = nn.Sequential(
-            nn.Linear(638, 52),
-            nn.ReLU(),
-            nn.Linear(52, 52),
-            nn.ReLU(),
-            nn.Linear(52, 52),
-            nn.ReLU(),
-            nn.Linear(52, 70),
-        )
-        self.loss = nn.MSELoss()
-        self.optimizer = optim.SGD(self.model.parameters(), lr=0.001)
-        self.epochs = 10
+        self.brain_genome_array = brain_genome.get_genome()
+        self.brain_genome_shape = brain_genome.get_genome_shape()
 
-        # self.contact_distances = []  # Distance of each phalanx from target object
+        # Create layers based on the brain genome shape
+        # Source: https://discuss.pytorch.org/t/how-to-create-mlp-model-with-arbitrary-number-of-hidden-layers/13124/6
 
-    def train(
-        self,
-        object_loc,
-        object_class,
-        action,
-        apply_rotation_angles,
-        fingers_genome=None,
-    ):
-        '''
+        self.model_layers = nn.ModuleList()
+        for shape in brain_genome.get_genome_shape():
+            if len(shape) == 2:
+                self.model_layers.append(nn.Linear(*shape))
+            self.model_layers.append(nn.ReLU())
+        self.model_layers.pop(-1)  # Remove activation from output layer
+
+    def move(self, input):
+        '''Returns rotation angle based on input
+
         Args:
-            object_loc (list): bounding box or target object. Shape = (2, 3)
-            object_class (int): class for the target object. Starts from 1
-            action (integer): pick up or drop object, either 1 or 2, respectively
-            apply_rotation_angles (function): a callback function to send rotation
-                angles to the specimen. Returns the fingers' distance from
-                the target object after the angles have been applied
-            fingers_genome (numpy array): genome encoding for fingers
+            input (list): [
+                distance of phalanx from target object,
+                rotation in x axis (0/1),
+                rotation in y axis (0/1),
+                rotation in z axis (0/1),
+                phalanx center of mass distance from palm
+            ]
         '''
-        if fingers_genome is None:
-            fingers_genome = self.fingers_genome
 
-        input = self.__flatten_input(object_loc, object_class, action, fingers_genome)
+        assert isinstance(input, list)
+        assert len(input) == 5
 
-        # Import the genome to the model
-        self.__genome_to_model(self.brain_genome, self.model)
+        output = torch.tensor(input)
 
-        # Train brain.
-        # Duding the raining process, the brain sends phalanges rotation output and
-        # receives their contact distances with the target object as to use in the
-        # loss function
-        for _ in range(self.epochs):
-            self.model.train()
+        for model in self.model_layers:
+            output = model(output)
 
-            # Calculate the rotation angle for each phalanx
-            pred_angles = self.model(input)
-
-            # Send calculated rotation angles to the specimen
-            contact_distances = apply_rotation_angles(pred_angles.tolist())
-
-            loss = self.__loss_fn(contact_distances)
-
-            self.optimizer.zero_grad()
-
-            loss.backward()
-            self.optimizer.step()
-
-    def move_object(self, object_loc, object_class, action, fingers_genome):
-        input = self.__flatten_input(object_loc, object_class, action, fingers_genome)
-        output = self.model(input)
-        return output.tolist()
+        return output
 
     def save_model(self, file_path):
         '''Saves model parameters to disk'''
-        if not os.path.exists(file_path):
+        if ('/' in file_path) and (not os.path.exists(file_path)):
             raise FileNotFoundError('Make sure the directories in the path exist.')
 
-        torch.save(self.model, file_path)
+        torch.save(self.model_layers, file_path)
 
     def load_model(self, file_path):
         '''Loads model parameters from disk'''
         if not os.path.exists(file_path):
             raise FileNotFoundError('Could not load model from the specified path')
 
-        self.model.load_state_dict(torch.load(file_path))
-        self.model.eval()
+        self.model_layers = torch.load(file_path)
 
-    # def set_contact_distances(self, contact_distances):
-    #     self.contact_distances = contact_distances
-
-    def __loss_fn(self, contact_distances):
-        '''
-        Custom loss function. The outputs from the neural network are rotation angles.
-        But the only feedback we get when the outputs are applied to the fingers is the
-        distance of the object from the fingers. Hence, we can not use a normal loss
-        function that calculates loss(output_angles, target_angles).
-        This custom loss function takes each phalanx's distance from the target object
-        and returns a scalar loss tensor. The final goal is to get the distances from
-        the target object to zero.
-
-        Args:
-            contact_distance (list(float)): list of distance of phalanges from the target
-                            object. This is calculated from PyBullet's getContactPoints
-
-        Returns:
-            scalar loss tensor
-        '''
-        assert isinstance(contact_distances, list)
-        assert len(contact_distances) > 0
-
-        dis_tensor = torch.tensor(contact_distances, requires_grad=True)
-
-        # Calculate mean squared error, but we do not subtract the target distance
-        # as we want them to be zero
-        loss = torch.mean(dis_tensor**2)
-        return loss
-
-    def __genome_to_model(self, genome_array, model):
-        '''
-        Imports genome array to model. First converts genome list of numpy arrays
-        to torch arrays which can be imported to the model
-        '''
-        model_params = list(model.parameters())
-        for i in range(len(genome_array)):
-            model_params[i].data = torch.tensor(genome_array[i])
-
-    def __model_to_genome(self, model):
-        '''
-        Converts model weights and biases to genome array
-        Source: https://stackoverflow.com/questions/50935345/understanding-torch-nn-parameter
-        '''
-        model_params = list(model.parameters())
-        return [param.detach().numpy() for param in model_params]
-
-    def __flatten_input(self, object_loc, object_class, action, fingers_genome):
-        '''
-        Flattens our multiple type and shape inputs to one dimensional torch array
-        '''
-        assert isinstance(object_loc, list)
-        assert len(object_loc) == 2
-        assert len(object_loc[0]) == 3
-        object_loc_np = np.array(object_loc)
-        object_loc_np = np.reshape(object_loc_np, (np.prod(object_loc_np.shape),))
-
-        assert isinstance(object_class, int)
-        object_class = np.array([object_class])
-
-        assert isinstance(action, int)
-        action = np.array([action])
-
-        assert isinstance(fingers_genome, np.ndarray)
-        fingers_genome = np.reshape(fingers_genome, (np.prod(fingers_genome.shape),))
-
-        flat_np_array = np.concatenate(
-            (object_loc_np, object_class, action, fingers_genome)
-        )
-
-        return torch.from_numpy(flat_np_array)
+# genome = BrainGenome()
+# phenome = BrainPhenome(genome)
+# print(phenome.move([1.2, 1, 0, 0, 2.7]))
+# phenome.save_model('test_2.pt')
+# phenome.load_model('test_2.pt')
+# print(phenome.move([1.2, 1, 0, 0, 2.7]))

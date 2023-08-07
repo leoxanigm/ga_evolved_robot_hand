@@ -21,9 +21,7 @@ if __name__ == '__main__':
 
 class BrainGenomeTest(unittest.TestCase):
     @given(
-        no_of_inputs=st.integers(min_value=1, max_value=1000),
         layers=st.lists(st.integers(min_value=10, max_value=60), min_size=1),
-        no_of_outputs=st.integers(min_value=20, max_value=100)
     )
     def test_random_genome(self, no_of_inputs, layers, no_of_outputs):
         brain_genome = BrainGenome(no_of_inputs, layers, no_of_outputs).get_genome()
