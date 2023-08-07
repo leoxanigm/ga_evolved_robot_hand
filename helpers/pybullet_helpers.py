@@ -11,7 +11,7 @@ def is_finger_link(body_id, joint_index):
 
 def get_distance_of_bodies(body_a_id, body_b_id, p_ID=0):
     '''
-    Calculates the distance between to PyBullet bodies.
+    Calculates the distance between two PyBullet bodies.
     Args:
         body_a_id (int): robot hand with fingers added
         body_b_id (int): target object to be picked up
