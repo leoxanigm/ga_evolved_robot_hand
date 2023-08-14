@@ -1,5 +1,4 @@
 import pybullet as p
-import pybullet_data as pd
 import numpy as np
 import time
 import sys
@@ -11,7 +10,7 @@ else:
 
 # Config
 p.setPhysicsEngineParameter(enableFileCaching=0)
-p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
+p.configureDebugVisualizer(p.COV_ENABLE_GUI, 1)
 
 # Create plane collision shape
 plane_shape = p.createCollisionShape(p.GEOM_PLANE)

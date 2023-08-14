@@ -2,7 +2,7 @@
 <robot name="sphere">
   <link name="sphere">
     <visual>
-      <origin xyz="0 0 0.05" rpy="0 0 0" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
         <sphere radius="0.15"/>
       </geometry>
@@ -11,7 +11,7 @@
       </material>
     </visual>
     <collision>
-    <origin xyz="0 0 0.05" rpy="0 0 0" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
         <sphere radius="0.15"/>
       </geometry>

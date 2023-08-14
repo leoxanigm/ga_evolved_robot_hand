@@ -20,3 +20,11 @@ class Limits:
 
 # The PyBullet body index of the first finger, excluding the robot arm
 FINGER_START_INDEX = 4
+
+# The inputs are:
+#   distance of phalanx from target object,
+#   rotation in x axis (0/1),
+#   rotation in y axis (0/1),
+#   rotation in z axis (0/1),
+#   phalanx center of mass distance from palm
+NUMBER_OF_INPUTS = 5

@@ -73,13 +73,13 @@ class GenerateURDF:
                 assert len(phalanx) == len(GeneDesc)
 
                 # generate link tag
-                link_tag_name = f'link_{i}_{j}'
+                link_tag_name = f'finger_link_{i}_{j}'
                 link_tag = self.__generate_link_tag(phalanx, link_tag_name)
 
                 # generate joint tag
                 joint_tag_parent = parent
                 joint_tag_child = link_tag_name
-                joint_tag_name = f'joint_{parent}_to_{link_tag_name}'
+                joint_tag_name = f'finger_joint_{parent}_to_{link_tag_name}'
 
                 joint_tag = self.__generate_joint_tag(
                     phalanx, joint_tag_name, joint_tag_parent, joint_tag_child

@@ -1,0 +1,755 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="robot">
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0.125" rpy="0 0 0" />
+      <geometry>
+        <box size="0.75 0.75 0.25" />
+      </geometry>
+      <material name="green" />
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.375" rpy="0 0 0" />
+      <geometry>
+        <cylinder length="0.25" radius="0.25" />
+      </geometry>
+      <material name="green">
+        <color rgba="0 1 0 1" />
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.75 0.75 0.5" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5" />
+      <inertia ixx="0.034" ixy="0.0" ixz="0.0" iyy="0.034" iyz="0.0" izz="0.034" />
+    </inertial>
+  </link>
+  <link name="support_link">
+    <visual>
+      <origin xyz="0 0 0.5" rpy="0 0 0" />
+      <geometry>
+        <box size="0.2 0.2 1" />
+      </geometry>
+      <material name="white">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.2 0.2 1" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.1" />
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01" />
+    </inertial>
+  </link>
+  <joint name="support_joint" type="continuous">
+    <origin xyz="0 0 0.5" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="support_link" />
+    <axis xyz="0 0 1" />
+  </joint>
+  <link name="arm_link">
+    <visual>
+      <origin xyz="0 0 0.5" rpy="0 0 0" />
+      <geometry>
+        <box size="0.2 0.2 1" />
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.2 0.2 1" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.1" />
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01" />
+    </inertial>
+  </link>
+  <joint name="arm_joint" type="revolute">
+    <origin xyz="-0.1 0 1" rpy="0 0 0" />
+    <parent link="support_link" />
+    <child link="arm_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-3.14" upper="3.14" effort="1.0" velocity="1.0" />
+  </joint>
+  <link name="wrist_link">
+    <visual>
+      <origin xyz="0 0 0.25" rpy="0 0 0" />
+      <geometry>
+        <box size="0.15 0.15 0.5" />
+      </geometry>
+      <material name="orange">
+        <color rgba="1 0.5 0 1" />
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.15 0.15 0.5" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.1" />
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01" />
+    </inertial>
+  </link>
+  <joint name="wrist_joint" type="fixed">
+    <origin xyz="0 0 0.9" rpy="0 1.571 0" />
+    <parent link="arm_link" />
+    <child link="wrist_link" />
+  </joint>
+  <link name="palm_link">
+    <visual>
+      <origin xyz="0 0 0.05" rpy="0 0 0" />
+      <geometry>
+        <box size="0.25 0.25 0.1" />
+      </geometry>
+      <material name="orange" />
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.25 0.25 0.1" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.1" />
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01" />
+    </inertial>
+  </link>
+  <joint name="palm_joint" type="fixed">
+    <origin xyz="0 0 0.45" rpy="0 0 0" />
+    <parent link="wrist_link" />
+    <child link="palm_link" />
+  </joint>
+  <link name="finger_link_0_0">
+    <visual>
+      <origin xyz="0 0 0.0345" rpy="0 0 0" />
+      <geometry>
+        <box size="0.045 0.031 0.069" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.045 0.031 0.069" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.029" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_palm_link_to_finger_link_0_0" type="revolute">
+    <origin xyz="-0.125 -0.034 0.1" rpy="0 0 0" />
+    <parent link="palm_link" />
+    <child link="finger_link_0_0" />
+    <axis xyz="0.0 -1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_0_1">
+    <visual>
+      <origin xyz="0 0 0.0335" rpy="0 0 0" />
+      <geometry>
+        <box size="0.028 0.028 0.067" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.028 0.028 0.067" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.016" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_0_0_to_finger_link_0_1" type="revolute">
+    <origin xyz="0.0 0.0 0.069" rpy="0 0 0" />
+    <parent link="finger_link_0_0" />
+    <child link="finger_link_0_1" />
+    <axis xyz="1.0 0.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_0_2">
+    <visual>
+      <origin xyz="0 0 0.0465" rpy="0 0 0" />
+      <geometry>
+        <box size="0.032 0.013 0.093" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.032 0.013 0.093" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.012" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_0_1_to_finger_link_0_2" type="revolute">
+    <origin xyz="0.0 0.0 0.067" rpy="0 0 0" />
+    <parent link="finger_link_0_1" />
+    <child link="finger_link_0_2" />
+    <axis xyz="1.0 0.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_0_3">
+    <visual>
+      <origin xyz="0 0 0.0325" rpy="0 0 0" />
+      <geometry>
+        <box size="0.014 0.014 0.065" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.014 0.014 0.065" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.004" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_0_2_to_finger_link_0_3" type="revolute">
+    <origin xyz="0.0 0.0 0.093" rpy="0 0 0" />
+    <parent link="finger_link_0_2" />
+    <child link="finger_link_0_3" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_0_4">
+    <visual>
+      <origin xyz="0 0 0.028" rpy="0 0 0" />
+      <geometry>
+        <box size="0.047 0.049 0.056" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.047 0.049 0.056" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.039" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_0_3_to_finger_link_0_4" type="revolute">
+    <origin xyz="0.0 0.0 0.065" rpy="0 0 0" />
+    <parent link="finger_link_0_3" />
+    <child link="finger_link_0_4" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_0_5">
+    <visual>
+      <origin xyz="0 0 0.012" rpy="0 0 0" />
+      <geometry>
+        <box size="0.013 0.049 0.024" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.013 0.049 0.024" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.005" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_0_4_to_finger_link_0_5" type="revolute">
+    <origin xyz="0.0 0.0 0.056" rpy="0 0 0" />
+    <parent link="finger_link_0_4" />
+    <child link="finger_link_0_5" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_1_0">
+    <visual>
+      <origin xyz="0 0 0.014" rpy="0 0 0" />
+      <geometry>
+        <box size="0.011 0.03 0.028" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.011 0.03 0.028" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.003" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_palm_link_to_finger_link_1_0" type="revolute">
+    <origin xyz="0.125 0.099 0.1" rpy="0 0 0" />
+    <parent link="palm_link" />
+    <child link="finger_link_1_0" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_1_1">
+    <visual>
+      <origin xyz="0 0 0.0285" rpy="0 0 0" />
+      <geometry>
+        <box size="0.031 0.036 0.057" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.031 0.036 0.057" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.019" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_1_0_to_finger_link_1_1" type="revolute">
+    <origin xyz="0.0 0.0 0.028" rpy="0 0 0" />
+    <parent link="finger_link_1_0" />
+    <child link="finger_link_1_1" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_1_2">
+    <visual>
+      <origin xyz="0 0 0.0135" rpy="0 0 0" />
+      <geometry>
+        <box size="0.013 0.034 0.027" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.013 0.034 0.027" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.004" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_1_1_to_finger_link_1_2" type="revolute">
+    <origin xyz="0.0 0.0 0.057" rpy="0 0 0" />
+    <parent link="finger_link_1_1" />
+    <child link="finger_link_1_2" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_2_0">
+    <visual>
+      <origin xyz="0 0 0.0295" rpy="0 0 0" />
+      <geometry>
+        <box size="0.041 0.049 0.059" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.041 0.049 0.059" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.036" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_palm_link_to_finger_link_2_0" type="revolute">
+    <origin xyz="-0.125 -0.026 0.1" rpy="0 0 0" />
+    <parent link="palm_link" />
+    <child link="finger_link_2_0" />
+    <axis xyz="0.0 -1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_2_1">
+    <visual>
+      <origin xyz="0 0 0.0445" rpy="0 0 0" />
+      <geometry>
+        <box size="0.042 0.031 0.089" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.042 0.031 0.089" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.035" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_2_0_to_finger_link_2_1" type="revolute">
+    <origin xyz="0.0 0.0 0.059" rpy="0 0 0" />
+    <parent link="finger_link_2_0" />
+    <child link="finger_link_2_1" />
+    <axis xyz="1.0 0.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_2_2">
+    <visual>
+      <origin xyz="0 0 0.0325" rpy="0 0 0" />
+      <geometry>
+        <box size="0.039 0.028 0.065" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.039 0.028 0.065" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.021" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_2_1_to_finger_link_2_2" type="revolute">
+    <origin xyz="0.0 0.0 0.089" rpy="0 0 0" />
+    <parent link="finger_link_2_1" />
+    <child link="finger_link_2_2" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_2_3">
+    <visual>
+      <origin xyz="0 0 0.0305" rpy="0 0 0" />
+      <geometry>
+        <box size="0.042 0.048 0.061" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.042 0.048 0.061" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.037" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_2_2_to_finger_link_2_3" type="revolute">
+    <origin xyz="0.0 0.0 0.065" rpy="0 0 0" />
+    <parent link="finger_link_2_2" />
+    <child link="finger_link_2_3" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_2_4">
+    <visual>
+      <origin xyz="0 0 0.018" rpy="0 0 0" />
+      <geometry>
+        <box size="0.011 0.047 0.036" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.011 0.047 0.036" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.006" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_2_3_to_finger_link_2_4" type="revolute">
+    <origin xyz="0.0 0.0 0.061" rpy="0 0 0" />
+    <parent link="finger_link_2_3" />
+    <child link="finger_link_2_4" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_2_5">
+    <visual>
+      <origin xyz="0 0 0.01" rpy="0 0 0" />
+      <geometry>
+        <box size="0.042 0.049 0.02" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.042 0.049 0.02" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.012" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_2_4_to_finger_link_2_5" type="revolute">
+    <origin xyz="0.0 0.0 0.036" rpy="0 0 0" />
+    <parent link="finger_link_2_4" />
+    <child link="finger_link_2_5" />
+    <axis xyz="1.0 0.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_2_6">
+    <visual>
+      <origin xyz="0 0 0.0135" rpy="0 0 0" />
+      <geometry>
+        <box size="0.037 0.016 0.027" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.037 0.016 0.027" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.005" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_2_5_to_finger_link_2_6" type="revolute">
+    <origin xyz="0.0 0.0 0.02" rpy="0 0 0" />
+    <parent link="finger_link_2_5" />
+    <child link="finger_link_2_6" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_2_7">
+    <visual>
+      <origin xyz="0 0 0.0225" rpy="0 0 0" />
+      <geometry>
+        <box size="0.038 0.035 0.045" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.038 0.035 0.045" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.018" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_2_6_to_finger_link_2_7" type="revolute">
+    <origin xyz="0.0 0.0 0.027" rpy="0 0 0" />
+    <parent link="finger_link_2_6" />
+    <child link="finger_link_2_7" />
+    <axis xyz="1.0 0.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_2_8">
+    <visual>
+      <origin xyz="0 0 0.0205" rpy="0 0 0" />
+      <geometry>
+        <box size="0.035 0.049 0.041" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.035 0.049 0.041" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.021" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_2_7_to_finger_link_2_8" type="revolute">
+    <origin xyz="0.0 0.0 0.045" rpy="0 0 0" />
+    <parent link="finger_link_2_7" />
+    <child link="finger_link_2_8" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_3_0">
+    <visual>
+      <origin xyz="0 0 0.0465" rpy="0 0 0" />
+      <geometry>
+        <box size="0.042 0.047 0.093" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.042 0.047 0.093" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.055" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_palm_link_to_finger_link_3_0" type="revolute">
+    <origin xyz="0.004 0.125 0.1" rpy="0 0 0" />
+    <parent link="palm_link" />
+    <child link="finger_link_3_0" />
+    <axis xyz="-1.0 0.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_3_1">
+    <visual>
+      <origin xyz="0 0 0.018" rpy="0 0 0" />
+      <geometry>
+        <box size="0.029 0.017 0.036" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.029 0.017 0.036" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.005" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_3_0_to_finger_link_3_1" type="revolute">
+    <origin xyz="0.0 0.0 0.093" rpy="0 0 0" />
+    <parent link="finger_link_3_0" />
+    <child link="finger_link_3_1" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_3_2">
+    <visual>
+      <origin xyz="0 0 0.0385" rpy="0 0 0" />
+      <geometry>
+        <box size="0.015 0.02 0.077" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.015 0.02 0.077" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.007" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_3_1_to_finger_link_3_2" type="revolute">
+    <origin xyz="0.0 0.0 0.036" rpy="0 0 0" />
+    <parent link="finger_link_3_1" />
+    <child link="finger_link_3_2" />
+    <axis xyz="1.0 0.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_3_3">
+    <visual>
+      <origin xyz="0 0 0.011" rpy="0 0 0" />
+      <geometry>
+        <box size="0.029 0.019 0.022" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.029 0.019 0.022" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.004" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_3_2_to_finger_link_3_3" type="revolute">
+    <origin xyz="0.0 0.0 0.077" rpy="0 0 0" />
+    <parent link="finger_link_3_2" />
+    <child link="finger_link_3_3" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_3_4">
+    <visual>
+      <origin xyz="0 0 0.011" rpy="0 0 0" />
+      <geometry>
+        <box size="0.031 0.027 0.022" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.031 0.027 0.022" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.006" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_3_3_to_finger_link_3_4" type="revolute">
+    <origin xyz="0.0 0.0 0.022" rpy="0 0 0" />
+    <parent link="finger_link_3_3" />
+    <child link="finger_link_3_4" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_3_5">
+    <visual>
+      <origin xyz="0 0 0.0265" rpy="0 0 0" />
+      <geometry>
+        <box size="0.026 0.05 0.053" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.026 0.05 0.053" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.021" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_3_4_to_finger_link_3_5" type="revolute">
+    <origin xyz="0.0 0.0 0.022" rpy="0 0 0" />
+    <parent link="finger_link_3_4" />
+    <child link="finger_link_3_5" />
+    <axis xyz="1.0 0.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_3_6">
+    <visual>
+      <origin xyz="0 0 0.0475" rpy="0 0 0" />
+      <geometry>
+        <box size="0.042 0.021 0.095" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.042 0.021 0.095" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.025" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_3_5_to_finger_link_3_6" type="revolute">
+    <origin xyz="0.0 0.0 0.053" rpy="0 0 0" />
+    <parent link="finger_link_3_5" />
+    <child link="finger_link_3_6" />
+    <axis xyz="0.0 1.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+  <link name="finger_link_3_7">
+    <visual>
+      <origin xyz="0 0 0.0365" rpy="0 0 0" />
+      <geometry>
+        <box size="0.022 0.011 0.073" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.022 0.011 0.073" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.005" />
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="finger_joint_finger_link_3_6_to_finger_link_3_7" type="revolute">
+    <origin xyz="0.0 0.0 0.095" rpy="0 0 0" />
+    <parent link="finger_link_3_6" />
+    <child link="finger_link_3_7" />
+    <axis xyz="1.0 0.0 0.0" />
+    <limit lower="-3.142" upper="3.142" effort="10" velocity="10" />
+  </joint>
+</robot>

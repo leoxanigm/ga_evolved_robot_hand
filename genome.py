@@ -31,7 +31,6 @@ class FingersGenome:
 
         return self.genome_matrix
 
-
     def save_genome(self):
         pass
 
@@ -146,8 +145,12 @@ class BrainGenome:
             # out-features to follow how weights and biases are initialized
             # for PyTorch Linear layer models.
             # Source: https://pytorch.org/docs/stable/generated/torch.nn.Linear.html
-            rand_range = np.sqrt(1/i)
-            genome_array.append(np.random.uniform(-rand_range, rand_range, (j, i)))  # weights
-            genome_array.append(np.random.uniform(-rand_range, rand_range, (i, )))  # biases
+            rand_range = np.sqrt(1 / i)
+            genome_array.append(
+                np.random.uniform(-rand_range, rand_range, (j, i))
+            )  # weights
+            genome_array.append(
+                np.random.uniform(-rand_range, rand_range, (i,))
+            )  # biases
 
         self.genome_array = genome_array

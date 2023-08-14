@@ -6,9 +6,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+import constants as c
 from constants import GeneDesc, Limits
 from helpers.math_functions import normalize
-from genome import BrainGenome
+from genome import BrainGenome, FingersGenome
 
 
 class FingersPhenome:
@@ -31,54 +32,18 @@ class FingersPhenome:
 
     def get_genome(self):
         '''Returns a modified fingers genome matrix'''
-        self.__set_link_dimensions()
-        self.__set_joint_origin()
+        self.__modify_genome()
 
         return self.genome_data
 
-    def __set_link_dimensions(self):
-        '''
-        Limit the lower and upper dimensions of the phalanx.
-        Takes the values from predefined constants.
-        '''
+    def __modify_genome(self):
+        '''Modify values of the default random genome array'''
+
         for i in range(len(self.genome_data)):  # loop through fingers
             finger = self.genome_data[i]
 
             if np.all(finger == 0):
                 # No need to continue looping as the rest of array elements will be zero
-                break
-
-            for j in range(len(finger)):  # loop through phalanges
-                phalanx = self.genome_data[i][j]
-
-                if np.all(phalanx == 0):
-                    break
-
-                assert len(phalanx) == len(GeneDesc)
-
-                phalanx[GeneDesc.DIM_X] = normalize(
-                    phalanx[GeneDesc.DIM_X], Limits.DIM_X_LOWER, Limits.DIM_X_UPPER
-                )
-                phalanx[GeneDesc.DIM_Y] = normalize(
-                    phalanx[GeneDesc.DIM_Y], Limits.DIM_Y_LOWER, Limits.DIM_Y_UPPER
-                )
-                phalanx[GeneDesc.DIM_Z] = normalize(
-                    phalanx[GeneDesc.DIM_Z], Limits.DIM_Z_LOWER, Limits.DIM_Z_UPPER
-                )
-
-    def __set_joint_origin(self):
-        '''
-        Places links at the edge of their respective parents by setting their
-        joint origin to their parents' lengths.
-        For the posterior phalanx, all x, y and z attributes are set to place the fingers
-        at the edges of the palm, based on their pre-populated random values.
-        For the rest of the phalanges, x and y values are set to 0.
-        '''
-        for i in range(len(self.genome_data)):  # loop through fingers
-            finger = self.genome_data[i]
-
-            if np.all(finger == 0):
-                # No need to continue looping as the rest of array elements will be None
                 break
 
             parent_dim_z = self.__get_robot_palm_dims['z']  # height of the palm link
@@ -91,44 +56,108 @@ class FingersPhenome:
 
                 assert len(phalanx) == len(GeneDesc)
 
-                # Attach link at the end of parent
-                phalanx[GeneDesc.JOINT_ORIGIN_Z] = parent_dim_z
+                self.__set_link_dimensions(phalanx)
 
-                parent_dim_z = phalanx[GeneDesc.DIM_Z]
+                new_parent_dim_z = self.__set_joint_origin(phalanx, parent_dim_z, j)
+                parent_dim_z = new_parent_dim_z
 
-                if j == 0:
-                    # Limit the range of joint origin x and y to the area of the palm
-                    palm_dim_x = float(self.__get_robot_palm_dims['x']) / 2
-                    palm_dim_y = float(self.__get_robot_palm_dims['y']) / 2
+                self.__set_joint_axis(phalanx, j)
 
-                    phalanx_dim_x = normalize(
-                        phalanx[GeneDesc.JOINT_ORIGIN_X], -palm_dim_x, palm_dim_x
-                    )
-                    phalanx_dim_y = normalize(
-                        phalanx[GeneDesc.JOINT_ORIGIN_Y], -palm_dim_y, palm_dim_y
-                    )
+    def __set_link_dimensions(self, phalanx):
+        '''
+        Limit the lower and upper dimensions of the phalanx.
+        Takes the values from predefined constants.
+        '''
 
-                    # Calculate normal to get sign of random location
-                    x_quadrant = phalanx_dim_x / np.abs(phalanx_dim_x)
-                    y_quadrant = phalanx_dim_y / np.abs(phalanx_dim_y)
+        phalanx[GeneDesc.DIM_X] = normalize(
+            phalanx[GeneDesc.DIM_X], Limits.DIM_X_LOWER, Limits.DIM_X_UPPER
+        )
+        phalanx[GeneDesc.DIM_Y] = normalize(
+            phalanx[GeneDesc.DIM_Y], Limits.DIM_Y_LOWER, Limits.DIM_Y_UPPER
+        )
+        phalanx[GeneDesc.DIM_Z] = normalize(
+            phalanx[GeneDesc.DIM_Z], Limits.DIM_Z_LOWER, Limits.DIM_Z_UPPER
+        )
 
-                    # Get intersection point between palm edges and the random point in the
-                    # palm. This moves the finger attachments to the edges while
-                    # maintaining randomness
-                    new_phalanx_dim_x, new_phalanx_dim_y = random.choice(
-                        [
-                            [phalanx_dim_x, palm_dim_y * y_quadrant],
-                            [palm_dim_x * x_quadrant, phalanx_dim_y],
-                        ]
-                    )
+    def __set_joint_origin(self, phalanx, parent_dim_z, index):
+        '''
+        Places links at the edge of their respective parents by setting their
+        joint origin to their parents' lengths.
+        For the posterior phalanx, all x, y and z attributes are set to place the fingers
+        at the edges of the palm, based on their pre-populated random values.
+        For the rest of the phalanges, x and y values are set to 0.
+        '''
 
-                    phalanx[GeneDesc.JOINT_ORIGIN_X] = new_phalanx_dim_x
-                    phalanx[GeneDesc.JOINT_ORIGIN_Y] = new_phalanx_dim_y
+        # Attach link at the end of parent
+        phalanx[GeneDesc.JOINT_ORIGIN_Z] = parent_dim_z
 
-                else:
-                    # Other phalanges are attached to the center of their parent phalanx
-                    phalanx[GeneDesc.JOINT_ORIGIN_X] = 0
-                    phalanx[GeneDesc.JOINT_ORIGIN_Y] = 0
+        if index == 0:
+            # Limit the range of joint origin x and y to the area of the palm
+            palm_dim_x = float(self.__get_robot_palm_dims['x']) / 2
+            palm_dim_y = float(self.__get_robot_palm_dims['y']) / 2
+
+            phalanx_dim_x = normalize(
+                phalanx[GeneDesc.JOINT_ORIGIN_X], -palm_dim_x, palm_dim_x
+            )
+            phalanx_dim_y = normalize(
+                phalanx[GeneDesc.JOINT_ORIGIN_Y], -palm_dim_y, palm_dim_y
+            )
+
+            # Get sign of random location to get its quadrant
+            x_quadrant = np.sign(phalanx_dim_x)
+            y_quadrant = np.sign(phalanx_dim_y)
+
+            # Get intersection point between palm edges and the random point in the
+            # palm. This moves the finger attachments to the edges while
+            # maintaining randomness
+            new_phalanx_dim_x, new_phalanx_dim_y = random.choice(
+                [
+                    [phalanx_dim_x, palm_dim_y * y_quadrant],
+                    [palm_dim_x * x_quadrant, phalanx_dim_y],
+                ]
+            )
+
+            phalanx[GeneDesc.JOINT_ORIGIN_X] = new_phalanx_dim_x
+            phalanx[GeneDesc.JOINT_ORIGIN_Y] = new_phalanx_dim_y
+
+        else:
+            # Other phalanges are attached to the center of their parent phalanx
+            phalanx[GeneDesc.JOINT_ORIGIN_X] = 0
+            phalanx[GeneDesc.JOINT_ORIGIN_Y] = 0
+
+        return phalanx[GeneDesc.DIM_Z]
+
+    def __set_joint_axis(self, phalanx, index):
+        if index == 0:
+            # The axis of rotation for the posterior phalanges should always
+            # face the center of the palm. This is to ensure the fingers can
+            # close and open
+
+            palm_dim_x = float(self.__get_robot_palm_dims['x']) / 2
+            palm_dim_y = float(self.__get_robot_palm_dims['y']) / 2
+
+            # Check which edge of palm the phalanx is located
+            if np.abs(phalanx[GeneDesc.JOINT_ORIGIN_X]) == np.abs(palm_dim_x):
+                edge_sign = np.sign(phalanx[GeneDesc.JOINT_ORIGIN_X])
+                phalanx[GeneDesc.JOINT_AXIS_X] = 0
+                phalanx[GeneDesc.JOINT_AXIS_Y] = edge_sign
+            else:
+                edge_sign = np.sign(phalanx[GeneDesc.JOINT_ORIGIN_Y])
+                phalanx[GeneDesc.JOINT_AXIS_X] = -1 * edge_sign
+                phalanx[GeneDesc.JOINT_AXIS_Y] = 0
+
+        else:
+            # For the rest of the phalanges, choose rotation axis based on which
+            # random value is the greatest
+            if phalanx[GeneDesc.JOINT_AXIS_X] > phalanx[GeneDesc.JOINT_AXIS_Y]:
+                phalanx[GeneDesc.JOINT_AXIS_X] = 1
+                phalanx[GeneDesc.JOINT_AXIS_Y] = 0
+            else:
+                phalanx[GeneDesc.JOINT_AXIS_X] = 0
+                phalanx[GeneDesc.JOINT_AXIS_Y] = 1
+
+        # For now we doesn't need the phalanges to revolve around the z axis
+        phalanx[GeneDesc.JOINT_AXIS_Z] = 0
 
     @property
     def __get_robot_palm_dims(self):
@@ -181,9 +210,9 @@ class BrainPhenome:
 
         self.model_layers = nn.ModuleList()
         for shape in brain_genome.get_genome_shape():
-            if len(shape) == 2:
+            if len(shape) == 2:  # neural layer
                 self.model_layers.append(nn.Linear(*shape))
-            self.model_layers.append(nn.ReLU())
+            self.model_layers.append(nn.ReLU())  # activation
         self.model_layers.pop(-1)  # Remove activation from output layer
 
     def move(self, input):
@@ -200,9 +229,9 @@ class BrainPhenome:
         '''
 
         assert isinstance(input, list)
-        assert len(input) == 5
+        assert len(input) == c.NUMBER_OF_INPUTS
 
-        output = torch.tensor(input)
+        output = torch.tensor(input, dtype=torch.float32)
 
         for model in self.model_layers:
             output = model(output)
@@ -223,6 +252,7 @@ class BrainPhenome:
 
         self.model_layers = torch.load(file_path)
 
+
 # genome = BrainGenome()
 # print(genome.get_genome())
 # phenome = BrainPhenome(genome)
@@ -230,3 +260,8 @@ class BrainPhenome:
 # phenome.save_model('test_2.pt')
 # phenome.load_model('test_2.pt')
 # print(phenome.move([1.2, 1, 0, 0, 2.7]))
+
+# genome = FingersGenome(GeneDesc).get_genome()
+# print(genome)
+# phenome = FingersPhenome(genome, GeneDesc, 'robot_hand.urdf')
+# print(phenome.get_genome())

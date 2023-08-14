@@ -1,14 +1,13 @@
-import torch
-import torch.nn as nn
+import sys
 
-model = nn.Sequential(
-    nn.Linear(3, 8),
-    nn.ReLU(),
-    nn.Linear(8, 8),
-    nn.ReLU(),
-    nn.Linear(8, 1)
-)
+from population import Population
+from simulation import Simulation
 
-inputs = torch.rand((3,))
+if len(sys.argv) == 2 and sys.argv[1] == 'DIRECT':
+    conn = 'DIRECT'
+else:
+    conn = 'GUI'
 
-print(model(inputs).tolist())
+specimen = Population(1).specimen[0]
+simulation = Simulation(conn)
+simulation.run_specimen(specimen)
