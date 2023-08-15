@@ -1,5 +1,7 @@
+import os
 import pybullet as p
 import numpy as np
+from multiprocessing import Pool
 import time
 
 from helpers.pybullet_helpers import get_distance_of_bodies, apply_rotation
@@ -19,7 +21,12 @@ class Simulation:
         elif conn_method == 'GUI':
             self.p_id = p.connect(p.GUI)
             p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0, physicsClientId=self.p_id)
-            p.resetDebugVisualizerCamera(5, 0, 200, [0, -3, -0.5])
+            p.resetDebugVisualizerCamera(
+                5, 0, 200, [0, -3, -0.5], physicsClientId=self.p_id
+            )
+
+        p.resetSimulation(physicsClientId=self.p_id)
+
         self.sim_id = sim_id
 
         # The PyBullet ID of the specimen in the simulation
@@ -109,7 +116,7 @@ class Simulation:
             physicsClientId=self.p_id,
         )
 
-    def get_distances(self, link_type='fingers') -> list[tuple[float, int]]:
+    def __get_distances(self, link_type='fingers') -> list[tuple[float, int]]:
         '''Returns a list of distances and their corresponding link index
         for phalanx links or palm from the target object.
         Args:
@@ -120,28 +127,11 @@ class Simulation:
             self.robot, self.target_objects[0], link_type, self.p_id
         )
 
-    def set_rotation_angles(self, joint_index: int, target_angle: int):
-        '''Sets rotation angle for a phalanx link
-        Args:
-            joint_index (int): target joint index
-            target_angle (int): target position for the joint
-        '''
-
-        p.setJointMotorControl2(
-            bodyUniqueId=self.robot,
-            jointIndex=joint_index,
-            controlMode=p.POSITION_CONTROL,
-            targetPosition=target_angle,
-            physicsClientId=self.p_id,
-        )
-
-    def run_specimen(self, specimen: Specimen, iterations=2400):
+    def run_specimen(self, specimen: Specimen):
         # Load specimen
         self.robot = p.loadURDF(
             specimen.specimen_URDF, useFixedBase=1, physicsClientId=self.p_id
         )
-
-        # p.resetDebugVisualizerCamera(2, 50,-25, [0, 0, 1])
 
         # Iterate over all target objects
         while len(self.target_objects) > 0:
@@ -150,21 +140,17 @@ class Simulation:
 
             # Spread out the fingers to ready to pick position
             specimen.move_fingers(
-                'ready_to_pick', self.robot, self.get_distances, self.p_id
+                'ready_to_pick', self.robot, self.__get_distances, self.p_id
             )
-
-            
-            # print('==========')
-            # print(specimen.fitness)
 
             # Move robot arm to pick up location
             specimen.move_arm('pick', self.robot, self.p_id)
 
             # Pick up the target object
-            specimen.move_fingers('pick', self.robot, self.get_distances, self.p_id)
+            specimen.move_fingers('pick', self.robot, self.__get_distances, self.p_id)
 
             # Calculate fitness for the fingers
-            specimen.calc_fitness(self.get_distances, 'fingers')
+            specimen.calc_fitness(self.__get_distances, 'fingers')
 
             # Move robot arm back to ready to pick location
             specimen.move_arm('ready_to_pick', self.robot, self.p_id)
@@ -173,11 +159,11 @@ class Simulation:
             specimen.move_arm('drop', self.robot, self.p_id)
 
             # Calculate fitness for the whole arm
-            specimen.calc_fitness(self.get_distances)
+            specimen.calc_fitness(self.__get_distances)
 
             # Drop object
             specimen.move_fingers(
-                'ready_to_pick', self.robot, self.get_distances, self.p_id
+                'ready_to_pick', self.robot, self.__get_distances, self.p_id
             )
 
             # Move robot arm to drop off location
@@ -186,10 +172,76 @@ class Simulation:
             )  # To add some delay at the drop location
             specimen.move_arm('ready_to_pick', self.robot, self.p_id)
 
-            print('==========')
-            print(specimen.fitness)
-
             self.__load_next_target_object()
 
+        # Keep simulation running is connected via GUI
         while self.conn_method == 'GUI':
             p.stepSimulation(physicsClientId=self.p_id)
+
+
+class ThreadedSim:
+    '''
+    Run the multiple simulation in multiple threads
+
+    Args:
+        pool_size (int): how many simulations to run at a time
+
+    Source:
+        M. King. (n.d.). CM3020 Artificial Intelligence, Creatures 1:
+        Automatic design using genetic algorithms. Coursera.
+        https://www.coursera.org/learn/uol-cm3020-artificial-intelligence/home/week/6
+    '''
+
+    def __init__(self, pool_size=os.cpu_count()):
+        self.pool_size = pool_size
+
+    @staticmethod
+    def static_run_specimen(specimen: Specimen):
+        simulation = Simulation()
+        simulation.run_specimen(specimen)
+
+        return specimen
+
+    def run_population(self, population: Population):
+        '''
+        Runs simulation for all specimen in a population
+        in multi-threaded environment
+
+        Args:
+            population (Population): A population of specimen
+        '''
+
+        pool_args = []
+        start_ind = 0
+
+        len_specimen = len(population.specimen)
+
+        # Add a list of arguments to run the specimen for
+        # the number of pool_size
+        while start_ind < len_specimen:
+            # Arguments for one run of a pool
+            curr_pool_args = []
+
+            for i in range(start_ind, start_ind + self.pool_size):
+                if i >= len_specimen:  # reached the end
+                    break
+
+                curr_pool_args.append([population.specimen[i]])
+
+            pool_args.append(curr_pool_args)
+
+            start_ind = start_ind + self.pool_size
+
+        new_specimen = []
+
+        for pool_argset in pool_args:
+            with Pool(self.pool_size) as pool:
+                # https://docs.python.org/3/library/multiprocessing.html#multiprocessing.pool.Pool.starmap
+                evaluated_specimen = pool.starmap(
+                    ThreadedSim.static_run_specimen, pool_argset
+                )
+
+                new_specimen.extend(evaluated_specimen)
+
+        # update the population
+        population.specimen = new_specimen

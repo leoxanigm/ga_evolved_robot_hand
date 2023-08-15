@@ -134,7 +134,7 @@ class BrainGenome:
         Returns a list of numpy arrays with shapes defined by layers input,
         The numpy arrays represent weights and biases.
         For the default configuration, it returns a random float list of
-        numpy arrays with shape: [(8, 5), (8,), (1, 8), (1,)]
+        numpy arrays with shape: [(8, 5), (5,), (1, 8), (8,)]
         '''
         assert type(self.layers) == list
 

@@ -217,6 +217,13 @@ class BrainPhenome:
         # Create layers based on the brain genome shape
         # Source: https://discuss.pytorch.org/t/how-to-create-mlp-model-with-arbitrary-number-of-hidden-layers/13124/6
 
+        # self.model_layers = nn.ModuleList()
+        # for shape in brain_genome.get_genome_shape():
+        #     if len(shape) == 2:  # neural layer
+        #         self.model_layers.append(nn.Linear(*shape))
+        #     self.model_layers.append(nn.ReLU())  # activation
+        # self.model_layers.pop(-1)  # Remove activation from output layer
+
         self.model_layers = nn.ModuleList()
         for shape in brain_genome.get_genome_shape():
             if len(shape) == 2:  # neural layer

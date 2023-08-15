@@ -56,6 +56,7 @@ class Specimen:
         fingers_genome = FingersGenome(self.gene_desc).get_genome()
 
         assert os.path.exists(self.robot_hand)
+        
         self.fingers = FingersPhenome(
             fingers_genome, self.gene_desc, self.robot_hand
         ).get_genome()
@@ -182,7 +183,6 @@ class Specimen:
         if len(self.prev_arm_angles) == 0:
             self.prev_arm_angles = [0, 0]
 
-        # Rotate the arm by the desired angle
         apply_rotation(body_id, [0, 1], action_dict[action], p_id, self.prev_arm_angles)
 
         # Keep track of applied angles
