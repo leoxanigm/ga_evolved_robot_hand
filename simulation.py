@@ -19,6 +19,7 @@ class Simulation:
         elif conn_method == 'GUI':
             self.p_id = p.connect(p.GUI)
             p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0, physicsClientId=self.p_id)
+            p.resetDebugVisualizerCamera(5, 0, 200, [0, -3, -0.5])
         self.sim_id = sim_id
 
         # The PyBullet ID of the specimen in the simulation
@@ -65,9 +66,48 @@ class Simulation:
             body_top_z = p.getAABB(body, physicsClientId=self.p_id)[1][2]
             body_z_pos = table_top_z + body_top_z
             p.resetBasePositionAndOrientation(
-                body, [0.8, -pos, body_z_pos], [0, 0, 0, -1], physicsClientId=self.p_id
+                body, [0.8, -pos, body_z_pos], [0, 0, 0, 1], physicsClientId=self.p_id
             )
             self.target_objects.append(body)
+
+    def __load_next_target_object(self):
+        '''Removes the current target object from the target_objects array
+        and moves the next one to the pick up location'''
+
+        assert len(self.target_objects) > 0
+
+        # Get the position of the current target
+        # If the target is not moved to the drop location, the arm was
+        # not successful and we need to remove the object to clear the
+        # place for the next target.
+        curr_pos, _ = p.getBasePositionAndOrientation(
+            self.target_objects[0], physicsClientId=self.p_id
+        )
+
+        if curr_pos[1] < 1 and curr_pos[1] > -1:
+            p.removeBody(self.target_objects[0], physicsClientId=self.p_id)
+
+        self.target_objects.pop(0)
+
+        if len(self.target_objects) < 1:
+            # Finished iterating the target objects
+            return
+
+        next_target = self.target_objects[0]
+        # Get the current position and orientation of the next target as lists
+        next_pos, next_orientation = map(
+            list,
+            p.getBasePositionAndOrientation(next_target, physicsClientId=self.p_id),
+        )
+
+        next_pos[1] = 0  # Move to target position in y direction
+
+        p.resetBasePositionAndOrientation(
+            next_target,
+            next_pos,
+            next_orientation,
+            physicsClientId=self.p_id,
+        )
 
     def get_distances(self, link_type='fingers') -> list[tuple[float, int]]:
         '''Returns a list of distances and their corresponding link index
@@ -103,28 +143,53 @@ class Simulation:
 
         # p.resetDebugVisualizerCamera(2, 50,-25, [0, 0, 1])
 
-        # Move robot arm to ready to pick location
-        specimen.move_arm('ready_to_pick', self.robot, self.p_id)
+        # Iterate over all target objects
+        while len(self.target_objects) > 0:
+            # Move robot arm to ready to pick location
+            specimen.move_arm('ready_to_pick', self.robot, self.p_id)
 
-        # Spread out the fingers to ready to pick position
-        specimen.move_fingers(
-            'ready_to_pick', self.robot, self.get_distances, self.p_id
-        )
+            # Spread out the fingers to ready to pick position
+            specimen.move_fingers(
+                'ready_to_pick', self.robot, self.get_distances, self.p_id
+            )
 
-        specimen.calc_fitness(self.get_distances)
-        print(specimen.fitness_total)
+            
+            # print('==========')
+            # print(specimen.fitness)
 
-        # Move robot arm to pick up location
-        specimen.move_arm('pick', self.robot, self.p_id)
+            # Move robot arm to pick up location
+            specimen.move_arm('pick', self.robot, self.p_id)
 
-        # Pick up the target object
-        specimen.move_fingers('pick', self.robot, self.get_distances, self.p_id)
+            # Pick up the target object
+            specimen.move_fingers('pick', self.robot, self.get_distances, self.p_id)
 
-        # Move robot arm back to ready to pick location
-        specimen.move_arm('ready_to_pick', self.robot, self.p_id)
+            # Calculate fitness for the fingers
+            specimen.calc_fitness(self.get_distances, 'fingers')
 
-        specimen.calc_fitness(self.get_distances)
-        print(specimen.fitness_total)
+            # Move robot arm back to ready to pick location
+            specimen.move_arm('ready_to_pick', self.robot, self.p_id)
+
+            # Move robot arm to drop off location
+            specimen.move_arm('drop', self.robot, self.p_id)
+
+            # Calculate fitness for the whole arm
+            specimen.calc_fitness(self.get_distances)
+
+            # Drop object
+            specimen.move_fingers(
+                'ready_to_pick', self.robot, self.get_distances, self.p_id
+            )
+
+            # Move robot arm to drop off location
+            specimen.move_arm(
+                'drop', self.robot, self.p_id
+            )  # To add some delay at the drop location
+            specimen.move_arm('ready_to_pick', self.robot, self.p_id)
+
+            print('==========')
+            print(specimen.fitness)
+
+            self.__load_next_target_object()
 
         while self.conn_method == 'GUI':
             p.stepSimulation(physicsClientId=self.p_id)

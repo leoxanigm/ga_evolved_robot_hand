@@ -147,13 +147,22 @@ class FingersPhenome:
                 phalanx[GeneDesc.JOINT_AXIS_Y] = 0
 
         else:
-            # For the rest of the phalanges, choose rotation axis based on which
-            # random value is the greatest
-            if phalanx[GeneDesc.JOINT_AXIS_X] > phalanx[GeneDesc.JOINT_AXIS_Y]:
+            # For the rest of the phalanges, choose rotation axis based
+            # on the sum of the random values
+            # I have chosen the values to spread out the rotational axis
+            # with ratio 2:2:1 in respect to rotation in x, rotation in y
+            # and rotation both in x and y respectively.
+            axis_x_ran = phalanx[GeneDesc.JOINT_AXIS_X]
+            axis_y_ran = phalanx[GeneDesc.JOINT_AXIS_Y]
+
+            if axis_x_ran + axis_y_ran < 0.8:
                 phalanx[GeneDesc.JOINT_AXIS_X] = 1
                 phalanx[GeneDesc.JOINT_AXIS_Y] = 0
-            else:
+            elif axis_x_ran + axis_y_ran < 1.6:
                 phalanx[GeneDesc.JOINT_AXIS_X] = 0
+                phalanx[GeneDesc.JOINT_AXIS_Y] = 1
+            else:
+                phalanx[GeneDesc.JOINT_AXIS_X] = 1
                 phalanx[GeneDesc.JOINT_AXIS_Y] = 1
 
         # For now we doesn't need the phalanges to revolve around the z axis

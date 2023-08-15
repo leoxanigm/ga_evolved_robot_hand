@@ -27,11 +27,13 @@ class Specimen:
     fingers = None
     brain = None
     specimen_URDF = None
-    # Fitness for each phalange
+    # Distance for each phalange
     # The first n elements are distances of fingers from the target object
     # The last element of distance of the palm from the target object
-    fitness_array = None
-    fitness_total = None  # The total fitness for the specimen
+    distance_array = None
+    distance_total = None  # The accumulated distance for the specimen
+
+    _fitness = 0
 
     prev_arm_angles = []  # Keeps track of previously applied angles for the arm
     prev_finger_angles = []  # Keeps track of previously applied angles for fingers
@@ -187,33 +189,58 @@ class Specimen:
         # This is later used for smooth movement animation
         self.prev_arm_angles = action_dict[action]
 
-    def calc_fitness(self, get_distances: FunctionType):
-        '''Calculates fitness of the specimen for each target object'''
-        if self.fitness_array is None:
-            self.fitness_array = [dis for dis, _ in get_distances('fingers')]
-            self.fitness_array.append(get_distances('palm')[0][0])
+    def calc_fitness(self, get_distances: FunctionType, link_type: str = 'all'):
+        '''Calculates fitness of the specimen for each target object
+        Args:
+            get_distances (function): callback to get distances from simulation
+            link_type (str): wether to get distances of just fingers or for
+                both fingers and the palm. This is to calculate the fitness
+                of the specimen when fingers are picking up the object in
+                addition to check if the specimen actually moved the object
+        '''
+        if self.distance_array is None:
+            if link_type == 'fingers':
+                self.distance_array = [dis for dis, _ in get_distances('fingers')]
+                self.distance_array.append(0)
+            else:
+                self.distance_array = [0] * len(get_distances('fingers'))
+                self.distance_array.append(get_distances('palm')[0][0])
+
         else:
-            # If fitness_array is not empty, that means we have a record of
+            # If distance_array is not empty, that means we have a record of
             # fitnesses for the first target object. In this case we add the
             # distances for the next target object to the original distances.
-            new_fitness_array = [dis for dis, _ in get_distances('fingers')]
-            new_fitness_array.append(get_distances('palm')[0][0])
+
+            if link_type == 'fingers':
+                new_distance_array = [dis for dis, _ in get_distances('fingers')]
+                new_distance_array.append(0)
+            else:
+                new_distance_array = [0] * (len(self.distance_array) - 1)
+                new_distance_array.append(get_distances('palm')[0][0])
 
             # Add the new fitness to the previous records
             # Source: https://www.javatpoint.com/how-to-add-two-lists-in-python
-            self.fitness_array = list(map(add, self.fitness_array, new_fitness_array))
+            self.distance_array = list(
+                map(add, self.distance_array, new_distance_array)
+            )
 
         # If the distance of the target object from the palm is small,
         # the arm has picked up the object, making the specimen more fit.
         # Hence we square the distance of the palm from the object to give
         # it more importance.
-        self.fitness_array[-1] = self.fitness_array[-1] ** 2
+        self.distance_array[-1] = self.distance_array[-1] ** 2
 
         # The final goal is to get the distances as close as possible
         # to zero. That is, we don't want neither positive or negative
         # distances. So, we use mean-square of the fitnesses to calculate
         # the total fitness value
-        self.fitness_total = np.mean(np.square(self.fitness_array))
+        self.distance_total = np.mean(np.square(self.distance_array))
+
+        # Use the minimum of the accumulated distance or 10 as exorbitantly
+        # large distance would not add that much difference to the fitness
+        self.distance_total = min(self.distance_total, 10)
+
+        self._fitness = 10 - self.distance_total
 
     @property
     def num_of_phalanges(self):
@@ -228,3 +255,7 @@ class Specimen:
                     break
 
                 finger_count += 0
+
+    @property
+    def fitness(self):
+        return self._fitness
