@@ -24,18 +24,15 @@ class FingersGenome:
 
         self.genome_matrix = None
 
-    def get_genome(self):
-        '''Returns random fingers genome matrix'''
+        # Initialize genome
         self.__set_default_matrix()
         self.__generate_rand_fingers()
 
+    @property
+    def genome(self):
+        '''Returns random fingers genome matrix'''
+
         return self.genome_matrix
-
-    def save_genome(self):
-        pass
-
-    def load_genome(self):
-        pass
 
     def __set_default_matrix(self):
         '''
@@ -98,9 +95,12 @@ class BrainGenome:
         self.layers = layers
         self.genome_array = None
 
-    def get_genome(self):
-        '''Returns random brain genome array'''
+        # Initialize genome
         self.__generate_default_genome_array()
+
+    @property
+    def genome(self):
+        '''Returns random brain genome array'''
 
         return self.genome_array
 
@@ -134,7 +134,7 @@ class BrainGenome:
         Returns a list of numpy arrays with shapes defined by layers input,
         The numpy arrays represent weights and biases.
         For the default configuration, it returns a random float list of
-        numpy arrays with shape: [(8, 5), (5,), (1, 8), (8,)]
+        numpy arrays with shape: [(5, 8), (8,), (8, 1), (1,)]
         '''
         assert type(self.layers) == list
 
@@ -147,10 +147,10 @@ class BrainGenome:
             # Source: https://pytorch.org/docs/stable/generated/torch.nn.Linear.html
             rand_range = np.sqrt(1 / i)
             genome_array.append(
-                np.random.uniform(-rand_range, rand_range, (j, i))
+                np.random.uniform(-rand_range, rand_range, (i, j))
             )  # weights
             genome_array.append(
-                np.random.uniform(-rand_range, rand_range, (i,))
+                np.random.uniform(-rand_range, rand_range, (j,))
             )  # biases
 
         self.genome_array = genome_array

@@ -45,7 +45,8 @@ class Specimen:
         self.robot_hand = robot_hand
 
         # Assign a unique id
-        self.id = uuid.uuid4()
+        # Use first 8 characters to avoid long file names
+        self.id = str(uuid.uuid4())[:8]
 
         # Initialize specimen
         self.__init_fingers()
@@ -53,20 +54,20 @@ class Specimen:
 
     def __init_fingers(self):
         # Initialize fingers genome
-        fingers_genome = FingersGenome(self.gene_desc).get_genome()
+        fingers_genome = FingersGenome(self.gene_desc)
 
         assert os.path.exists(self.robot_hand)
-        
-        self.fingers = FingersPhenome(
-            fingers_genome, self.gene_desc, self.robot_hand
-        ).get_genome()
+
+        self.fingers_phenome = FingersPhenome(self.robot_hand, fingers_genome)
+        self.fingers = self.fingers_phenome.genome
 
         # Write fingers URDF definition file
-        output_file = f'intraining_specimen/r_{self.id}.urdf'
+        training_folder_path = 'intraining_specimen/'
+        output_file = f'{self.id}.urdf'
 
         generate_urdf = GenerateURDF(self.fingers)
         urdf_written = generate_urdf.generate_robot_fingers(
-            self.robot_hand, output_file
+            self.robot_hand, training_folder_path + output_file
         )
         if urdf_written:
             self.specimen_URDF = output_file
@@ -241,6 +242,35 @@ class Specimen:
         self.distance_total = min(self.distance_total, 10)
 
         self._fitness = 10 - self.distance_total
+
+    def save_specimen(self, generation_id: str):
+        '''
+        Save specimen to disk. Copies the specimen URDF file to
+        fit_specimen/urdf_files folder, saves fingers and brain genome
+        to fit_specimen/genome_encodings folder.
+
+        Args:
+            generation_id (str): unique id of the generation the specimen was run
+        '''
+
+        training_urdf = f'intraining_specimen/{self.specimen_URDF}'
+        target_urdf = f'fit_specimen/urdf_files/{generation_id}_{self.specimen_URDF}'
+
+        assert os.path.exists(training_urdf)
+
+        # Move the URDF file
+        # Source: https://www.learndatasci.com/solutions/python-move-file/
+        os.replace(training_urdf, target_urdf)
+
+        # Save fingers genome matrix
+        self.fingers_phenome.save_genome(
+            f'fit_specimen/genome_encodings/{generation_id}_fingers_{self.id}.pickle'
+        )
+
+        # Save brain genome
+        self.brain.save_genome(
+            f'fit_specimen/genome_encodings/{generation_id}_brain_{self.id}.pickle'
+        )
 
     @property
     def num_of_phalanges(self):

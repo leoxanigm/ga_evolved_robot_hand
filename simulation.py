@@ -127,11 +127,13 @@ class Simulation:
             self.robot, self.target_objects[0], link_type, self.p_id
         )
 
-    def run_specimen(self, specimen: Specimen):
+    def run_specimen(self, specimen: Specimen, in_training=True):
         # Load specimen
-        self.robot = p.loadURDF(
-            specimen.specimen_URDF, useFixedBase=1, physicsClientId=self.p_id
-        )
+        if in_training:
+            urdf_file = f'intraining_specimen/{specimen.specimen_URDF}'
+            self.robot = p.loadURDF(
+                urdf_file, useFixedBase=1, physicsClientId=self.p_id
+            )
 
         # Iterate over all target objects
         while len(self.target_objects) > 0:
