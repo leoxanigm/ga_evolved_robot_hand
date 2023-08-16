@@ -343,4 +343,4 @@ class BrainPhenome:
         with open(file_path, 'rb') as f:
             brain_genome_array = pickle.load(f)
             self.brain_genome_array = brain_genome_array
-            self.__genome_to_model(brain_genome_array)
+            self.__genome_to_model(self.brain_genome_array)

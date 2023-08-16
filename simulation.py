@@ -134,6 +134,11 @@ class Simulation:
             self.robot = p.loadURDF(
                 urdf_file, useFixedBase=1, physicsClientId=self.p_id
             )
+        else:
+            urdf_file = f'fit_specimen/urdf_files/{specimen.specimen_URDF}'
+            self.robot = p.loadURDF(
+                urdf_file, useFixedBase=1, physicsClientId=self.p_id
+            )
 
         # Iterate over all target objects
         while len(self.target_objects) > 0:
