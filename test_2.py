@@ -12,9 +12,13 @@ from simulation import Simulation, ThreadedSim
 # else:
 #     conn = 'GUI'
 
-generation_count = 10
+generation_count = 50
 population_count = 100
 run_id = str(uuid4())[:8]
+
+csv_file = open(f'fit_specimen/{run_id}.csv', 'w')
+writer = csv.writer(csv_file)
+writer.writerow(['generation_id', 'generation_index', 'average_fitness'])
 
 for i in range(generation_count):
     print('==============')
@@ -40,10 +44,7 @@ for i in range(generation_count):
     if fittest[0] > 0:
         fittest[1].save_specimen(generation_id)
 
-    with open(f'fit_specimen/{run_id}.csv', 'w') as f:
-        writer = csv.writer(f)
-        writer.writerow(['generation_id', 'generation_index', 'average_fitness'])
-        writer.writerow([generation_id, i, pop_avg_fitness])
+    writer.writerow([generation_id, i, pop_avg_fitness])
 
     # Clean up training urdf file
     # Source: https://www.tutorialspoint.com/How-to-delete-all-files-in-a-directory-with-Python
@@ -53,3 +54,4 @@ for i in range(generation_count):
         if os.path.isfile(file_path):
             os.remove(file_path)
 
+csv_file.close()
