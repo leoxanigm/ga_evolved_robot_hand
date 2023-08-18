@@ -104,31 +104,6 @@ class BrainGenome:
 
         return self.genome_array
 
-    def get_genome_shape(self):
-        '''Returns layer shape used to initialize genome'''
-        return self.layers
-
-    def set_genome(self, model_parameters):
-        '''Sets genome from model parameters
-        Args:
-            model_parameters (generator[torch.nn.parameter.Parameter])
-        '''
-        genome_array = []
-
-        isinstance(model_parameters, GeneratorType)
-
-        # We have to first convert PyTorch tensor to numpy
-        for parameter in model_parameters:
-            genome_array.append(parameter.data.numpy())
-
-        self.genome_array = genome_array
-
-    def save_genome(self):
-        pass
-
-    def load_genome(self):
-        pass
-
     def __generate_default_genome_array(self):
         '''
         Returns a list of numpy arrays with shapes defined by layers input,
