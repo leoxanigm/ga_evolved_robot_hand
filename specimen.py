@@ -67,7 +67,7 @@ class Specimen:
 
     def __init_fingers(self, generation_id: str = None, specimen_id: str = None):
         if generation_id and specimen_id:  # Load fingers from saved pickle dump
-            self.fingers_phenome = FingersPhenome(self.robot_hand)
+            self.fingers_phenome = FingersPhenome()
             self.fingers = self.fingers_phenome.load_genome(
                 f'fit_specimen/genome_encodings/{generation_id}_fingers_{specimen_id}.pickle'
             )
@@ -78,8 +78,8 @@ class Specimen:
 
             assert os.path.exists(self.robot_hand)
 
-            self.fingers_phenome = FingersPhenome(self.robot_hand, fingers_genome)
-            self.fingers = self.fingers_phenome.genome
+            self.fingers_phenome = FingersPhenome(fingers_genome)
+            self.fingers = self.fingers_phenome.phenome
 
             # Write fingers URDF definition file
             training_folder_path = 'intraining_specimen/'
