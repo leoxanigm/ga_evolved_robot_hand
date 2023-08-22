@@ -116,11 +116,11 @@ class Specimen:
         Moves the fingers to the specified target angles.
 
         Args:
-            target_angles (list): target rotation angles determined by the brain
-
-        Returns:
-            the fingers' distance from the target object after the angles have
-            been applied
+            action (str): the current state of the arm
+            body_id (int): the specimen body id in the PyBullet simulation
+            get_distances (function): a callback function to get distance of
+                each phalanx from the target object
+            p_id (int): PyBullet connected server's simulation id
         '''
         # Center of mass distance of each phalanx from the palm
         center_of_mass = 0
@@ -163,7 +163,7 @@ class Specimen:
                     y_axis = phalanx[GeneDesc.JOINT_AXIS_Y]
                     z_axis = phalanx[GeneDesc.JOINT_AXIS_Z]
 
-                    # Center of mass is a the mid-point
+                    # Center of mass is a the midpoint
                     center_of_mass += phalanx[GeneDesc.DIM_Z] / 2
 
                     target_angle = self.brain.move(
@@ -202,7 +202,6 @@ class Specimen:
             'pick': [0, np.pi / 2],
             'move_to_drop': [np.pi, np.pi / 4],
             'drop': [np.pi, np.pi / 2],
-            'reset': [0, np.pi / 4],
         }
 
         assert action in action_dict

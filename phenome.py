@@ -116,9 +116,6 @@ class FingersPhenome:
         For the rest of the phalanges, x and y values are set to 0.
         '''
 
-        # Attach link at the end of parent
-        phalanx[GeneDesc.JOINT_ORIGIN_Z] = parent_dim_z
-
         if index == 0:
             # Limit the range of joint origin x and y to the area of the palm
             palm_dim_x = float(self.__get_robot_palm_dims['x']) / 2
@@ -137,21 +134,23 @@ class FingersPhenome:
 
             # Get intersection point between palm edges and the random point in the
             # palm. This moves the finger attachments to the edges while
-            # maintaining randomness
-            new_phalanx_dim_x, new_phalanx_dim_y = random.choice(
-                [
-                    [phalanx_dim_x, palm_dim_y * y_quadrant],
-                    [palm_dim_x * x_quadrant, phalanx_dim_y],
-                ]
-            )
-
-            phalanx[GeneDesc.JOINT_ORIGIN_X] = new_phalanx_dim_x
-            phalanx[GeneDesc.JOINT_ORIGIN_Y] = new_phalanx_dim_y
+            # maintaining randomness and order. The randomness is chosen by 
+            # the value of joint origin in z axis. So for the same genome encoding,
+            # we get the same attachment point each time.
+            if phalanx[GeneDesc.JOINT_ORIGIN_Z] < 0.5:
+                phalanx[GeneDesc.JOINT_ORIGIN_X] = phalanx_dim_x
+                phalanx[GeneDesc.JOINT_ORIGIN_Y] = palm_dim_y * y_quadrant
+            else:
+                phalanx[GeneDesc.JOINT_ORIGIN_X] = palm_dim_x * x_quadrant
+                phalanx[GeneDesc.JOINT_ORIGIN_Y] = phalanx_dim_y
 
         else:
             # Other phalanges are attached to the center of their parent phalanx
             phalanx[GeneDesc.JOINT_ORIGIN_X] = 0
             phalanx[GeneDesc.JOINT_ORIGIN_Y] = 0
+
+        # Attach link at the end of parent
+        phalanx[GeneDesc.JOINT_ORIGIN_Z] = parent_dim_z
 
         return phalanx[GeneDesc.DIM_Z]
 
@@ -321,8 +320,13 @@ class BrainPhenome:
 
         output = torch.tensor(input, dtype=torch.float32)
 
-        for model in self.model_layers:
-            output = model(output)
+        for layer in self.model_layers:
+            output = layer(output)
+
+            # Get activations, this will later be used as a probability map
+            # when weights and biases are crossed
+            if isinstance(layer, nn.ReLU):
+                print(output)
 
         return output
 
