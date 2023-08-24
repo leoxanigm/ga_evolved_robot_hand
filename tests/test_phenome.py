@@ -9,18 +9,22 @@ from constants import GeneDesc, Limits
 class FingersPhenomeTest(unittest.TestCase):
     fingers_genome = None
     fingers_genome = None
-    palm_dim = 0.25 # robot palm size
+    palm_dim = 0.25  # robot palm size
 
     def setUp(self):
-        self.fingers_genome = FingersGenome(GeneDesc).get_genome()
-        self.fingers_phenome = FingersPhenome(
-            self.fingers_genome, GeneDesc, 'robot_hand.urdf'
-        ).get_genome()
+        self.fingers_genome = FingersGenome(GeneDesc)
+        self.fingers_phenome = FingersPhenome(self.fingers_genome).phenome
 
     def test_set_list_dimensions(self):
         '''Test link dimensions are in the range of defined constants.'''
         for i in range(len(self.fingers_phenome)):
+            if np.all(self.fingers_phenome[i] == 0):
+                break
+
             for j in range(len(self.fingers_phenome[i])):
+                if np.all(self.fingers_phenome[i][j] == 0):
+                    break
+
                 phalanx_x = self.fingers_phenome[i][j][GeneDesc.DIM_X]
                 phalanx_y = self.fingers_phenome[i][j][GeneDesc.DIM_Y]
                 phalanx_z = self.fingers_phenome[i][j][GeneDesc.DIM_Z]
@@ -34,7 +38,13 @@ class FingersPhenomeTest(unittest.TestCase):
         Test joint origin at phalanx edge for other phalanges.
         '''
         for i in range(len(self.fingers_phenome)):
+            if np.all(self.fingers_phenome[i] == 0):
+                break
+
             for j in range(len(self.fingers_phenome[i])):
+                if np.all(self.fingers_phenome[i][j] == 0):
+                    break
+                
                 phalanx_x = self.fingers_phenome[i][j][GeneDesc.JOINT_ORIGIN_X]
                 phalanx_y = self.fingers_phenome[i][j][GeneDesc.JOINT_ORIGIN_Y]
                 phalanx_z = self.fingers_phenome[i][j][GeneDesc.JOINT_ORIGIN_Z]
@@ -49,7 +59,7 @@ class FingersPhenomeTest(unittest.TestCase):
                 # Joint attachment at z axis should be at edge. We just check if it is
                 # in the link length limit.
                 assert Limits.DIM_Z_LOWER <= phalanx_z <= Limits.DIM_Z_UPPER
-                
+
 
 if __name__ == '__main__':
     unittest.main()
