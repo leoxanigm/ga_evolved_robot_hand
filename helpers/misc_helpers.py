@@ -1,6 +1,7 @@
 import os
 import xml.etree.ElementTree as ET
 from typing import TypedDict
+import csv
 
 class Dims(TypedDict):
     x: float
@@ -36,3 +37,14 @@ def get_robot_palm_dims(robot_hand_file: str) -> Dims:
             'y': size_arr[1],
             'z': size_arr[2],
         }
+
+def write_csv(file_path: str, data_row: list[float]):
+    assert os.path.exists(file_path)
+
+    try:
+        with open(file_path, 'a') as f:
+            writer = csv.writer(f)
+            writer.writerow(data_row)
+        return True
+    except:
+        return False

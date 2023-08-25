@@ -52,6 +52,9 @@ class Specimen:
         # URDF robot hand file. This contains the palm the fingers will be attached to
         self.robot_hand = robot_hand
 
+        self._fingers_genome = None
+        self._brain_genome = None
+
         if generation_id and specimen_id:  # Specimen from saved data
             # Initialize saved specimen
             self.__init_fingers(generation_id, specimen_id)
@@ -71,6 +74,7 @@ class Specimen:
             self.fingers = self.fingers_phenome.load_genome(
                 f'fit_specimen/genome_encodings/{generation_id}_fingers_{specimen_id}.pickle'
             )
+            
             self.specimen_URDF = f'{generation_id}_{specimen_id}.urdf'
         else:
             # Initialize fingers genome
@@ -94,6 +98,8 @@ class Specimen:
             else:
                 raise Exception('Can not initialize robot fingers')
 
+        self._fingers_genome = self.fingers_phenome.genome
+
     def __init_brain(self, generation_id: str = None, specimen_id: str = None):
         if generation_id and specimen_id:  # Load brain from saved pickle dump
             self.brain = BrainPhenome()
@@ -104,6 +110,8 @@ class Specimen:
             # Initialize specimen brain
             brain_genome = BrainGenome()
             self.brain = BrainPhenome(brain_genome)
+        
+        self._brain_genome = self.brain.genome
 
     def move_fingers(
         self,
@@ -314,3 +322,11 @@ class Specimen:
     @property
     def fitness(self):
         return self._fitness
+
+    @property
+    def fingers_genome(self):
+        return self._fingers_genome
+
+    @property
+    def brain_genome(self):
+        return self._brain_genome

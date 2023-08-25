@@ -3,8 +3,17 @@ from copy import deepcopy
 import random
 import math
 
+from constants import GeneDesc, Limits
+
 
 class CrossFingers:
+    '''
+    Crosses two fingers of two specimen parents.
+    Works by either randomly taking a whole finger from one parent and
+    replacing a whole finger of the second parent or by randomly replacing
+    a phalanx/phalanges of one parent ba a phalanx/phalanges of the
+    second parent'''
+
     @staticmethod
     def cross_genomes(parent_1: np.ndarray, parent_2: np.ndarray):
         assert parent_1.shape == parent_2.shape
@@ -44,7 +53,66 @@ class CrossFingers:
         return child_modified
 
 
+class MutateFingers:
+    '''Randomly adds a small value (positive or negative) to the genetic encoding
+    of fingers to give them new physical characters'''
+
+    @staticmethod
+    def mutate(child):
+        mutated_child = deepcopy(child)
+
+        for i in range(len(child)):  # Fingers
+            for j in range(len(child[i])):  # Phalanges
+                if random.random() < 0.3:
+                    # Calculate a small value from each of x, y, z dimensions'abs
+                    # small limits
+                    m_v_x = Limits.DIM_X_LOWER / 10
+                    m_v_y = Limits.DIM_Y_LOWER / 10
+                    m_v_z = Limits.DIM_Z_LOWER / 10
+
+                    # Add/subtract a random amount based on the above values
+                    child[i][j][GeneDesc.DIM_X] += np.random.uniform(-m_v_x, m_v_x)
+                    child[i][j][GeneDesc.DIM_Y] += np.random.uniform(-m_v_y, m_v_y)
+                    child[i][j][GeneDesc.DIM_Z] += np.random.uniform(-m_v_z, m_v_z)
+
+        return mutated_child
+
+
+class MutateBrain:
+    '''Randomly adds a small value (positive or negative) to the genetic encoding
+    of weights and biases to give them new values'''
+
+    @staticmethod
+    def mutate(child):
+        assert isinstance(child, list)
+        assert isinstance(child[0], np.ndarray)
+
+        mutated_child = deepcopy(child)
+
+        # Loop through each weight and bias np array and randomly chose a value
+        # from each of the parents
+        for i in range(len(mutated_child)):
+            # We will use the same logic used to generate random weight and
+            # bias values to generate a random value to augment the values
+            features = len(mutated_child[i])
+            m_v = np.sqrt(1 / features)
+
+            for j in range(len(mutated_child[i])):
+                if isinstance(mutated_child[i][j], np.ndarray):
+                    for k in range(len(mutated_child[i][j])):
+                        if random.random() < 0.5:
+                            mutated_child[i][j][k] += np.random.uniform(-m_v, m_v)
+                else:
+                    if random.random() < 0.5:
+                        mutated_child[i][j] += np.random.uniform(-m_v, m_v)
+
+        return mutated_child
+
+
 class CrossBrain:
+    '''Crosses weights and biases of two parents to give a child with a
+    new set of weights and biases'''
+
     @staticmethod
     def cross_genomes(parent_1: list[np.ndarray], parent_2: list[np.ndarray]):
         # Check there are equal number of weights and biases for each parent
@@ -57,7 +125,8 @@ class CrossBrain:
         # from each of the parents
         for i in range(len(child)):
             for j in range(len(child[i])):
-                if random.random() < 0.5:  # Replace the whole finger
+                if random.random() < 0.5:
+                    # Both parents have equal probability of passing a genome information
                     child[i][j] = parent_2[i][j]
 
         return child
