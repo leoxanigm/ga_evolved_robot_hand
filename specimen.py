@@ -9,7 +9,7 @@ from operator import add
 from genome import FingersGenome, BrainGenome
 from phenome import FingersPhenome, BrainPhenome
 from generate_urdf import GenerateURDF
-from constants import GeneDesc
+from constants import GeneDesc, ROBOT_HAND, TRAINING_DIR
 from helpers.pybullet_helpers import apply_rotation
 
 
@@ -42,8 +42,10 @@ class Specimen:
 
     def __init__(
         self,
-        gene_description: GeneDesc,
-        robot_hand: str,
+        gene_description = GeneDesc,
+        robot_hand: str = ROBOT_HAND,
+        fingers_genome: np.ndarray = None,
+        brain_genome: list[np.ndarray] = None,
         generation_id: str = None,
         specimen_id: str = None,
     ):
@@ -55,62 +57,88 @@ class Specimen:
         self._fingers_genome = None
         self._brain_genome = None
 
+        # Assign a unique id
+        # Use first 8 characters to avoid long file names
+        self.id = str(uuid.uuid4())[:8]
+
         if generation_id and specimen_id:  # Specimen from saved data
             # Initialize saved specimen
-            self.__init_fingers(generation_id, specimen_id)
-            self.__init_brain(generation_id, specimen_id)
+            self.__init_fingers(generation_id=generation_id, specimen_id=specimen_id)
+            self.__init_brain(generation_id=generation_id, specimen_id=specimen_id)
+        elif fingers_genome is not None and brain_genome is not None:
+            # Initialize specimen from provided genomes
+            self.__init_fingers(fingers_genome=fingers_genome, brain_genome=brain_genome)
+            self.__init_brain(fingers_genome=fingers_genome, brain_genome=brain_genome)
         else:  # New specimen
-            # Assign a unique id
-            # Use first 8 characters to avoid long file names
-            self.id = str(uuid.uuid4())[:8]
-
             # Initialize new specimen
             self.__init_fingers()
             self.__init_brain()
 
-    def __init_fingers(self, generation_id: str = None, specimen_id: str = None):
+    def __init_fingers(
+        self,
+        fingers_genome=None,
+        brain_genome=None,
+        generation_id: str = None,
+        specimen_id: str = None,
+    ):
         if generation_id and specimen_id:  # Load fingers from saved pickle dump
             self.fingers_phenome = FingersPhenome()
             self.fingers = self.fingers_phenome.load_genome(
                 f'fit_specimen/genome_encodings/{generation_id}_fingers_{specimen_id}.pickle'
             )
-            
-            self.specimen_URDF = f'{generation_id}_{specimen_id}.urdf'
-        else:
-            # Initialize fingers genome
-            fingers_genome = FingersGenome(self.gene_desc)
 
-            assert os.path.exists(self.robot_hand)
+            self.specimen_URDF = f'{generation_id}_{specimen_id}.urdf'
+            return
+
+        if fingers_genome is not None and brain_genome is not None:
+            self.fingers_phenome = FingersPhenome(fingers_genome)
+            self.fingers = self.fingers_phenome.phenome
+        else:
+            # Initialize random fingers genome
+            fingers_genome = FingersGenome(self.gene_desc).genome
 
             self.fingers_phenome = FingersPhenome(fingers_genome)
             self.fingers = self.fingers_phenome.phenome
 
-            # Write fingers URDF definition file
-            training_folder_path = 'intraining_specimen/'
-            output_file = f'{self.id}.urdf'
+        # Write fingers URDF definition file
+        training_folder_path = TRAINING_DIR
+        output_file = f'{self.id}.urdf'
 
-            generate_urdf = GenerateURDF(self.fingers)
-            urdf_written = generate_urdf.generate_robot_fingers(
-                self.robot_hand, training_folder_path + output_file
-            )
-            if urdf_written:
-                self.specimen_URDF = output_file
-            else:
-                raise Exception('Can not initialize robot fingers')
+        assert os.path.exists(self.robot_hand)
+
+        generate_urdf = GenerateURDF(self.fingers)
+        urdf_written = generate_urdf.generate_robot_fingers(
+            self.robot_hand, training_folder_path + output_file
+        )
+        if urdf_written:
+            self.specimen_URDF = output_file
+        else:
+            raise Exception('Can not initialize robot fingers')
 
         self._fingers_genome = self.fingers_phenome.genome
 
-    def __init_brain(self, generation_id: str = None, specimen_id: str = None):
+    def __init_brain(
+        self,
+        fingers_genome=None,
+        brain_genome=None,
+        generation_id: str = None,
+        specimen_id: str = None,
+    ):
         if generation_id and specimen_id:  # Load brain from saved pickle dump
             self.brain = BrainPhenome()
             self.brain.load_genome(
                 f'fit_specimen/genome_encodings/{generation_id}_brain_{specimen_id}.pickle'
             )
-        else:
-            # Initialize specimen brain
-            brain_genome = BrainGenome()
+            return
+
+        if brain_genome is not None:
             self.brain = BrainPhenome(brain_genome)
+        else:
+            # Initialize random brain genome
+            brain_genome = BrainGenome().genome
         
+        self.brain = BrainPhenome(brain_genome)
+
         self._brain_genome = self.brain.genome
 
     def move_fingers(
@@ -327,6 +355,21 @@ class Specimen:
     def fingers_genome(self):
         return self._fingers_genome
 
+    @fingers_genome.setter
+    def fingers_genome(self, fingers_genome):
+        assert isinstance(fingers_genome, np.ndarray)
+
+        self._fingers_genome = fingers_genome
+        self.__init_fingers()
+
     @property
     def brain_genome(self):
         return self._brain_genome
+
+    @brain_genome.setter
+    def brain_genome(self, brain_genome):
+        assert isinstance(brain_genome, list)
+        assert isinstance(brain_genome[0], np.ndarray)
+
+        self._brain_genome = brain_genome
+        self.__init_brain()

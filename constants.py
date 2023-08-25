@@ -28,3 +28,6 @@ FINGER_START_INDEX = 4
 #   rotation in z axis (0/1),
 #   phalanx center of mass distance from palm
 NUMBER_OF_INPUTS = 5
+
+TRAINING_DIR = 'intraining_specimen/'
+ROBOT_HAND = 'robot_hand.urdf'

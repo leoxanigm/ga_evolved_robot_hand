@@ -27,7 +27,7 @@ class FingersPhenome:
         self.phenome_matrix = None
 
         if fingers_genome is not None:
-            self.genome_matrix = fingers_genome.genome
+            self.genome_matrix = fingers_genome
 
             self.phenome_matrix = self.genome_matrix
             self.__modify_genome(self.phenome_matrix)
@@ -232,7 +232,7 @@ class BrainPhenome:
         self.brain_genome_array = None
 
         if brain_genome is not None:
-            self.brain_genome_array = brain_genome.genome
+            self.brain_genome_array = brain_genome
             self.__genome_to_model(self.brain_genome_array)
 
     def __genome_to_model(self, brain_genome_array: list[np.ndarray]):
