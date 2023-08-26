@@ -298,11 +298,11 @@ class Specimen:
         # the total fitness value
         self.distance_total = np.mean(np.square(self.distance_array))
 
-        # Use the minimum of the accumulated distance or 10 as exorbitantly
+        # Use the minimum of the accumulated distance or 50 as exorbitantly
         # large distance would not add that much difference to the fitness
-        self.distance_total = min(self.distance_total, 10)
+        self.distance_total = min(self.distance_total, 50)
 
-        self._fitness = 10 - self.distance_total
+        self._fitness = 50 - self.distance_total
 
     def save_specimen(self, generation_id: str):
         '''
