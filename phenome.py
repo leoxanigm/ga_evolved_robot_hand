@@ -157,43 +157,43 @@ class FingersPhenome:
         return phalanx[GeneDesc.DIM_Z]
 
     def __set_joint_axis(self, phalanx, index):
-        if index == 0:
-            # The axis of rotation for the posterior phalanges should always
-            # face the center of the palm. This is to ensure the fingers can
-            # close and open
+        # if index == 0:
+        # The axis of rotation for the posterior phalanges should always
+        # face the center of the palm. This is to ensure the fingers can
+        # close and open
 
-            dimensions = get_robot_palm_dims('robot_hand.urdf')
-            palm_dim_x = float(dimensions['x']) / 2
-            palm_dim_y = float(dimensions['y']) / 2
+        dimensions = get_robot_palm_dims('robot_hand.urdf')
+        palm_dim_x = float(dimensions['x']) / 2
+        palm_dim_y = float(dimensions['y']) / 2
 
-            # Check which edge of palm the phalanx is located
-            if np.abs(phalanx[GeneDesc.JOINT_ORIGIN_X]) == np.abs(palm_dim_x):
-                edge_sign = np.sign(phalanx[GeneDesc.JOINT_ORIGIN_X])
-                phalanx[GeneDesc.JOINT_AXIS_X] = 0
-                phalanx[GeneDesc.JOINT_AXIS_Y] = edge_sign
-            else:
-                edge_sign = np.sign(phalanx[GeneDesc.JOINT_ORIGIN_Y])
-                phalanx[GeneDesc.JOINT_AXIS_X] = -1 * edge_sign
-                phalanx[GeneDesc.JOINT_AXIS_Y] = 0
-
+        # Check which edge of palm the phalanx is located
+        if np.abs(phalanx[GeneDesc.JOINT_ORIGIN_X]) == np.abs(palm_dim_x):
+            edge_sign = np.sign(phalanx[GeneDesc.JOINT_ORIGIN_X])
+            phalanx[GeneDesc.JOINT_AXIS_X] = 0
+            phalanx[GeneDesc.JOINT_AXIS_Y] = edge_sign
         else:
-            # For the rest of the phalanges, choose rotation axis based
-            # on the sum of the  values
-            # I have chosen the values to spread out the rotational axis
-            # with ratio 2:2:1 in respect to rotation in x, rotation in y
-            # and rotation both in x and y respectively.
-            axis_x_ran = phalanx[GeneDesc.JOINT_AXIS_X]
-            axis_y_ran = phalanx[GeneDesc.JOINT_AXIS_Y]
+            edge_sign = np.sign(phalanx[GeneDesc.JOINT_ORIGIN_Y])
+            phalanx[GeneDesc.JOINT_AXIS_X] = -1 * edge_sign
+            phalanx[GeneDesc.JOINT_AXIS_Y] = 0
 
-            if axis_x_ran + axis_y_ran < 0.8:
-                phalanx[GeneDesc.JOINT_AXIS_X] = 1
-                phalanx[GeneDesc.JOINT_AXIS_Y] = 0
-            elif axis_x_ran + axis_y_ran < 1.6:
-                phalanx[GeneDesc.JOINT_AXIS_X] = 0
-                phalanx[GeneDesc.JOINT_AXIS_Y] = 1
-            else:
-                phalanx[GeneDesc.JOINT_AXIS_X] = 1
-                phalanx[GeneDesc.JOINT_AXIS_Y] = 1
+        # else:
+        #     # For the rest of the phalanges, choose rotation axis based
+        #     # on the sum of the  values
+        #     # I have chosen the values to spread out the rotational axis
+        #     # with ratio 2:2:1 in respect to rotation in x, rotation in y
+        #     # and rotation both in x and y respectively.
+        #     axis_x_ran = phalanx[GeneDesc.JOINT_AXIS_X]
+        #     axis_y_ran = phalanx[GeneDesc.JOINT_AXIS_Y]
+
+        #     if axis_x_ran + axis_y_ran < 0.8:
+        #         phalanx[GeneDesc.JOINT_AXIS_X] = 1
+        #         phalanx[GeneDesc.JOINT_AXIS_Y] = 0
+        #     elif axis_x_ran + axis_y_ran < 1.6:
+        #         phalanx[GeneDesc.JOINT_AXIS_X] = 0
+        #         phalanx[GeneDesc.JOINT_AXIS_Y] = 1
+        #     else:
+        #         phalanx[GeneDesc.JOINT_AXIS_X] = 1
+        #         phalanx[GeneDesc.JOINT_AXIS_Y] = 1
 
         # For now we doesn't need the phalanges to revolve around the z axis
         phalanx[GeneDesc.JOINT_AXIS_Z] = 0

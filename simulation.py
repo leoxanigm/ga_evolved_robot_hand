@@ -123,6 +123,10 @@ class Simulation:
             link_type (str): either fingers or palm
         '''
 
+        print('==================================')
+        print(p.getLinkState(self.robot, 0))
+        print('----------------------------------')
+
         return get_distance_of_bodies(
             self.robot, self.target_objects[0], link_type, self.p_id
         )

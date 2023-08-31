@@ -42,7 +42,7 @@ class Specimen:
 
     def __init__(
         self,
-        gene_description = GeneDesc,
+        gene_description=GeneDesc,
         robot_hand: str = ROBOT_HAND,
         fingers_genome: np.ndarray = None,
         brain_genome: list[np.ndarray] = None,
@@ -67,7 +67,9 @@ class Specimen:
             self.__init_brain(generation_id=generation_id, specimen_id=specimen_id)
         elif fingers_genome is not None and brain_genome is not None:
             # Initialize specimen from provided genomes
-            self.__init_fingers(fingers_genome=fingers_genome, brain_genome=brain_genome)
+            self.__init_fingers(
+                fingers_genome=fingers_genome, brain_genome=brain_genome
+            )
             self.__init_brain(fingers_genome=fingers_genome, brain_genome=brain_genome)
         else:  # New specimen
             # Initialize new specimen
@@ -136,7 +138,7 @@ class Specimen:
         else:
             # Initialize random brain genome
             brain_genome = BrainGenome().genome
-        
+
         self.brain = BrainPhenome(brain_genome)
 
         self._brain_genome = self.brain.genome
