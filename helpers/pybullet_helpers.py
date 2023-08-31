@@ -78,54 +78,50 @@ def apply_rotation(body_id, joint_index, target_pos, p_id=0, prev_target_pos=Non
             'body_a_id must be an instance of a robot hand with fingers attached.'
         )
 
-    
-
     if isinstance(joint_index, list):
         # If multiple joint indexes are given, target positions must also
         # a list with equal length
         assert isinstance(target_pos, list)
         assert len(joint_index) == len(target_pos)
 
-        # if prev_target_pos:
-        #     smooth_joint_control(
-        #         body_id,
-        #         joint_index,
-        #         prev_target_pos,
-        #         target_pos,
-        #         p_id,
-        #         joint_motor_control_function=p.setJointMotorControlArray,
-        #     )
-        # else:
-        p.setJointMotorControlArray(
-            body_id,
-            joint_index,
-            p.POSITION_CONTROL,
-            target_pos,
-            physicsClientId=p_id,
-        )
+        if prev_target_pos:
+            smooth_joint_control(
+                body_id,
+                joint_index,
+                prev_target_pos,
+                target_pos,
+                p_id,
+                joint_motor_control_function=p.setJointMotorControlArray,
+            )
+        else:
+            p.setJointMotorControlArray(
+                body_id,
+                joint_index,
+                p.POSITION_CONTROL,
+                target_pos,
+                physicsClientId=p_id,
+            )
 
         p.stepSimulation(physicsClientId=p_id)
 
     elif isinstance(joint_index, int):
-        # if prev_target_pos:
-        #     smooth_joint_control(
-        #         body_id, joint_index, prev_target_pos, target_pos, p_id
-        #     )
-        # else:
-        p.setJointMotorControl2(
-            body_id,
-            joint_index,
-            p.POSITION_CONTROL,
-            target_pos,
-            physicsClientId=p_id,
-        )
+        if prev_target_pos:
+            smooth_joint_control(
+                body_id, joint_index, prev_target_pos, target_pos, p_id
+            )
+        else:
+            p.setJointMotorControl2(
+                body_id,
+                joint_index,
+                p.POSITION_CONTROL,
+                target_pos,
+                physicsClientId=p_id,
+            )
 
         p.stepSimulation(physicsClientId=p_id)
 
     else:
         raise TypeError('joint_index must me either an integer or list of integers')
-
-    
 
 
 def smooth_joint_control(

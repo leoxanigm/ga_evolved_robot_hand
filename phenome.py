@@ -1,4 +1,3 @@
-
 import os
 import numpy as np
 import torch
@@ -7,7 +6,7 @@ import torch.optim as optim
 import pickle
 
 import constants as c
-from constants import GeneDesc, Limits
+from constants import GeneDesc, Limits, ROBOT_HAND
 from genome import BrainGenome, FingersGenome
 from helpers.math_functions import normalize
 from helpers.misc_helpers import get_robot_palm_dims
@@ -71,8 +70,9 @@ class FingersPhenome:
                 # No need to continue looping as the rest of array elements will be zero
                 break
 
-            dimensions = get_robot_palm_dims('robot_hand.urdf')
+            dimensions = get_robot_palm_dims(ROBOT_HAND)
             parent_dim_z = dimensions['z']  # height of the palm link
+            parent_axes = None
 
             for j in range(len(finger)):  # loop through phalanges
                 phalanx = phenome_matrix[i][j]
@@ -90,7 +90,7 @@ class FingersPhenome:
                 parent_dim_z = new_parent_dim_z
 
                 # Modify joint axis
-                self.__set_joint_axis(phalanx, j)
+                parent_axes = self.__set_joint_axis(phalanx, parent_axes)
 
     def __set_link_dimensions(self, phalanx):
         '''
@@ -119,7 +119,7 @@ class FingersPhenome:
 
         if index == 0:
             # Limit the range of joint origin x and y to the area of the palm
-            dimensions = get_robot_palm_dims('robot_hand.urdf')
+            dimensions = get_robot_palm_dims(ROBOT_HAND)
             palm_dim_x = float(dimensions['x']) / 2
             palm_dim_y = float(dimensions['y']) / 2
 
@@ -156,47 +156,34 @@ class FingersPhenome:
 
         return phalanx[GeneDesc.DIM_Z]
 
-    def __set_joint_axis(self, phalanx, index):
-        # if index == 0:
-        # The axis of rotation for the posterior phalanges should always
-        # face the center of the palm. This is to ensure the fingers can
-        # close and open
+    def __set_joint_axis(self, phalanx, parent_axes=None):
+        if parent_axes is None:
+            # The axis of rotation for the posterior phalanges should always
+            # face the center of the palm. This is to ensure the fingers can
+            # close and open
 
-        dimensions = get_robot_palm_dims('robot_hand.urdf')
-        palm_dim_x = float(dimensions['x']) / 2
-        palm_dim_y = float(dimensions['y']) / 2
+            dimensions = get_robot_palm_dims(ROBOT_HAND)
+            palm_dim_x = float(dimensions['x']) / 2
+            palm_dim_y = float(dimensions['y']) / 2
 
-        # Check which edge of palm the phalanx is located
-        if np.abs(phalanx[GeneDesc.JOINT_ORIGIN_X]) == np.abs(palm_dim_x):
-            edge_sign = np.sign(phalanx[GeneDesc.JOINT_ORIGIN_X])
-            phalanx[GeneDesc.JOINT_AXIS_X] = 0
-            phalanx[GeneDesc.JOINT_AXIS_Y] = edge_sign
+            # Check which edge of palm the phalanx is located
+            if np.abs(phalanx[GeneDesc.JOINT_ORIGIN_X]) == np.abs(palm_dim_x):
+                edge_sign = np.sign(phalanx[GeneDesc.JOINT_ORIGIN_X])
+                phalanx[GeneDesc.JOINT_AXIS_X] = 0
+                phalanx[GeneDesc.JOINT_AXIS_Y] = edge_sign
+            else:
+                edge_sign = np.sign(phalanx[GeneDesc.JOINT_ORIGIN_Y])
+                phalanx[GeneDesc.JOINT_AXIS_X] = -1 * edge_sign
+                phalanx[GeneDesc.JOINT_AXIS_Y] = 0
         else:
-            edge_sign = np.sign(phalanx[GeneDesc.JOINT_ORIGIN_Y])
-            phalanx[GeneDesc.JOINT_AXIS_X] = -1 * edge_sign
-            phalanx[GeneDesc.JOINT_AXIS_Y] = 0
-
-        # else:
-        #     # For the rest of the phalanges, choose rotation axis based
-        #     # on the sum of the  values
-        #     # I have chosen the values to spread out the rotational axis
-        #     # with ratio 2:2:1 in respect to rotation in x, rotation in y
-        #     # and rotation both in x and y respectively.
-        #     axis_x_ran = phalanx[GeneDesc.JOINT_AXIS_X]
-        #     axis_y_ran = phalanx[GeneDesc.JOINT_AXIS_Y]
-
-        #     if axis_x_ran + axis_y_ran < 0.8:
-        #         phalanx[GeneDesc.JOINT_AXIS_X] = 1
-        #         phalanx[GeneDesc.JOINT_AXIS_Y] = 0
-        #     elif axis_x_ran + axis_y_ran < 1.6:
-        #         phalanx[GeneDesc.JOINT_AXIS_X] = 0
-        #         phalanx[GeneDesc.JOINT_AXIS_Y] = 1
-        #     else:
-        #         phalanx[GeneDesc.JOINT_AXIS_X] = 1
-        #         phalanx[GeneDesc.JOINT_AXIS_Y] = 1
+            # For the rest of the phalanges, set the axis of rotation same
+            # as the posterior phalanx
+            phalanx[GeneDesc.JOINT_AXIS_X], phalanx[GeneDesc.JOINT_AXIS_Y] = parent_axes
 
         # For now we doesn't need the phalanges to revolve around the z axis
         phalanx[GeneDesc.JOINT_AXIS_Z] = 0
+
+        return [phalanx[GeneDesc.JOINT_AXIS_X], phalanx[GeneDesc.JOINT_AXIS_Y]]
 
     @property
     def genome(self):
@@ -234,8 +221,10 @@ class BrainPhenome:
         self.brain_genome_array = None
 
         self.output = None
-        self.optimizer = None # Assigned when model is initialized with model layer parameters
-        self.loss_fn = nn.MSELoss() # Mean Squared Error
+        self.optimizer = (
+            None  # Assigned when model is initialized with model layer parameters
+        )
+        self.loss_fn = nn.MSELoss()  # Mean Squared Error
 
         if brain_genome is not None:
             self.brain_genome_array = brain_genome
@@ -296,10 +285,10 @@ class BrainPhenome:
         '''Updates genome encoding to match the neural network's weights and biases'''
 
         parameters = []
-        
+
         for i, layer_parameters in enumerate(self.model_layers.parameters()):
             np_parameters = np.array(layer_parameters.data)
-            if i % 2 == 0: # Transpose weights
+            if i % 2 == 0:  # Transpose weights
                 np_parameters = np_parameters.T
 
             parameters.append(np_parameters)
