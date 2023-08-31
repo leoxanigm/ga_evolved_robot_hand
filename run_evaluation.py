@@ -59,6 +59,6 @@ for j in range(50):  # run 50 evaluations
             [generation_id, i, pop_avg_fitness],
         )
 
-        clear_training_dir
+        clear_training_dir()
 
     write_csv('log.csv', [j, time.time() - start_time])

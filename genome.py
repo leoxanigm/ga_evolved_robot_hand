@@ -121,11 +121,12 @@ class BrainGenome:
             # for PyTorch Linear layer models.
             # Source: https://pytorch.org/docs/stable/generated/torch.nn.Linear.html
             rand_range = np.sqrt(1 / i)
-            genome_array.append(
-                np.random.uniform(-rand_range, rand_range, (i, j))
-            )  # weights
-            genome_array.append(
-                np.random.uniform(-rand_range, rand_range, (j,))
-            )  # biases
+            random_weights = np.random.uniform(-rand_range, rand_range, (i, j))
+            random_weights = random_weights.astype(np.float32)
+            genome_array.append(random_weights)  # weights
+
+            random_biases = np.random.uniform(-rand_range, rand_range, (j,))
+            random_biases = random_biases.astype(np.float32)
+            genome_array.append(random_biases)  # biases
 
         self.genome_array = genome_array

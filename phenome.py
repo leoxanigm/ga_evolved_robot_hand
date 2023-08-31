@@ -233,6 +233,10 @@ class BrainPhenome:
         self.model_layers = None
         self.brain_genome_array = None
 
+        self.output = None
+        self.optimizer = None # Assigned when model is initialized with model layer parameters
+        self.loss_fn = nn.MSELoss() # Mean Squared Error
+
         if brain_genome is not None:
             self.brain_genome_array = brain_genome
             self.__genome_to_model(self.brain_genome_array)
@@ -285,6 +289,23 @@ class BrainPhenome:
 
         self.model_layers.pop(-1)  # Remove activation from output layer
 
+        # Initialize optimizer
+        self.optimizer = optim.SGD(self.model_layers.parameters(), lr=0.001)
+
+    def __model_to_genome(self):
+        '''Updates genome encoding to match the neural network's weights and biases'''
+
+        parameters = []
+        
+        for i, layer_parameters in enumerate(self.model_layers.parameters()):
+            np_parameters = np.array(layer_parameters.data)
+            if i % 2 == 0: # Transpose weights
+                np_parameters = np_parameters.T
+
+            parameters.append(np_parameters)
+
+        self.genome = parameters
+
     def move(self, input):
         '''Returns rotation angle based on input
 
@@ -311,7 +332,33 @@ class BrainPhenome:
             # if isinstance(layer, nn.ReLU):
             #     activations = output
 
-        return output
+        self.output = output
+
+        return self.output
+
+    def learn(self, target: list[float]):
+        '''
+        Optimize the weights and biases of the brain based on desired
+        rotation angle
+
+        Args:
+            target (list[float]): the target rotation angle
+        '''
+
+        assert isinstance(target, list)
+        assert len(target) == 1
+        assert self.output is not None
+
+        target = torch.tensor(target, dtype=torch.float32)
+
+        loss = self.loss_fn(self.output, target)
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        # Update genome layer with optimized weights
+        self.__model_to_genome()
 
     def save_genome(self, file_path: str):
         '''Saves model parameters to disk'''
@@ -342,3 +389,14 @@ class BrainPhenome:
             )
 
         return self.brain_genome_array
+
+    @genome.setter
+    def genome(self, genome_array):
+        '''Sets a new genome brain array'''
+
+        if self.brain_genome_array is not None:
+            assert len(genome_array) == len(self.brain_genome_array)
+            for i in range(len(genome_array)):
+                assert genome_array[i].shape == self.brain_genome_array[i].shape
+
+        self.brain_genome_array = genome_array
