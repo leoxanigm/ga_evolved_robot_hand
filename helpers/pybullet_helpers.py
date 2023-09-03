@@ -1,6 +1,9 @@
 import pybullet as p
 import constants as c
 import time
+import math
+
+from .math_functions import distance_between_coordinates
 
 
 def is_finger_link(body_id, joint_index):
@@ -58,6 +61,32 @@ def get_distance_of_bodies(
                 body_a_id, points[3]
             )  # points[3] is joint index of body_a
         ]
+
+def calculate_rotation_angle(body_a_id, body_b_id, link_length, link_index, p_id) -> float:
+    '''
+    Calculates angle based on length and distance
+    angle = arctan(distance / length)
+    Args:
+        body_a_id (int): robot hand with fingers added
+        body_b_id (int): target object to be picked up
+        link_length (float): length from palm to base of link
+        link_index (int): link index in the simulation
+        p_id (int): PyBullet physicsClientID
+    Returns:
+        Angle in radians
+    '''
+    link_loc = list(p.getLinkState(body_a_id, link_index, physicsClientId=p_id)[0])  # link location at link origin
+    link_loc[2] -= link_length  # get location of the link's end
+
+    obj_loc = p.getBasePositionAndOrientation(body_b_id, physicsClientId=p_id)[0]
+
+    target_loc = p.rayTest(link_loc, obj_loc, physicsClientId=p_id)  # cast ray from current link to cube
+    target_loc = target_loc[0][3]  # 3'rd index is where the intersection loc is
+
+    dis = distance_between_coordinates(target_loc, link_loc)
+    angle = math.atan(dis / link_length)  # target angle
+
+    return angle
 
 
 def apply_rotation(body_id, joint_index, target_pos, p_id=0, prev_target_pos=None):

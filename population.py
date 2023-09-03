@@ -65,7 +65,7 @@ class Population:
 
         for specimen in self._specimen:
             specimen.fingers_genome = MutateFingers.mutate(specimen.fingers_genome)
-            specimen.brain_genome = MutateBrain.mutate(specimen.brain_genome)
+            # specimen.brain_genome = MutateBrain.mutate(specimen.brain_genome)
 
         self.mutated = True
 

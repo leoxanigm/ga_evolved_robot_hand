@@ -4,6 +4,8 @@ import time
 import sys
 import math
 
+from helpers.pybullet_helpers import get_distance_of_bodies
+
 if len(sys.argv) == 2 and sys.argv[1] == 'DIRECT':
     p.connect(p.DIRECT)
 else:
@@ -44,39 +46,58 @@ def calculate_distance(a, b):
     distance = math.sqrt(dx**2 + dy**2 + dz**2)
     return distance
 
-
-r = p.loadURDF('fit_specimen/urdf_files/01cc6c0a_a7418336.urdf', useFixedBase=1)
+r = p.loadURDF('intraining_specimen/5fb86384.urdf', useFixedBase=1)
 c = p.loadURDF('objects/cube.urdf', useFixedBase=1)
 
 p.setJointMotorControl2(r, 0, p.POSITION_CONTROL, 0)
 p.setJointMotorControl2(r, 1, p.POSITION_CONTROL, np.pi / 2)
-p.setJointMotorControl2(r, 4, p.POSITION_CONTROL, 0)
-p.setJointMotorControl2(r, 5, p.POSITION_CONTROL, 0)
-p.setJointMotorControl2(r, 6, p.POSITION_CONTROL, 0)
 
-for _ in range(100):
+for i in range(4, p.getNumJoints(r)):
+    p.setJointMotorControl2(r, i, p.POSITION_CONTROL, 0)
+
+p.setJointMotorControl2(r, 4, p.POSITION_CONTROL, np.pi)
+
+for _ in range(2400):
     p.stepSimulation()
 
-p.resetBasePositionAndOrientation(c, [0.9, 0, 0.8], [0, 0, 0, 1])
+p.resetBasePositionAndOrientation(c, [0.8, 0, 0.8], [0, 0, 0, 1])
 
 cube_loc = p.getBasePositionAndOrientation(c)[0]
 
 length = 0
 link_length = 0.062  # to be taken from gene encoding
 
-for i in range(4, 7):
+print(get_distance_of_bodies(r, c, 'fingers'))
+print('=========================')
+print('----------------------------')
+
+new_dis = []
+
+for i in range(4, p.getNumJoints(r)):
     length += link_length
     link_loc = list(p.getLinkState(r, i)[0])  # link location at link origin
-    link_loc[2] -= length  # get location of the link's end
+    # link_loc[2] -= length  # get location of the link's end
     target_loc = p.rayTest(link_loc, cube_loc)  # cast ray from current link to cube
     target_loc = target_loc[0][3]  # 3'rd index is where the intersection loc is
     dis = calculate_distance(target_loc, link_loc)
     angle = math.atan(dis / length)  # target angle
 
-    p.setJointMotorControl2(r, i, p.POSITION_CONTROL, targetPosition=angle)
+    p.setJointMotorControl2(r, i, p.POSITION_CONTROL, targetPosition=-angle)
 
     for _ in range(2400):
         p.stepSimulation()
+
+    link_loc = list(p.getLinkState(r, i)[0])  # link location at link origin
+    # link_loc[2] -= length  # get location of the link's end
+    target_loc = p.rayTest(link_loc, cube_loc)  # cast ray from current link to cube
+    target_loc = target_loc[0][2]  # 3'rd index is where the intersection loc is
+    dis = calculate_distance(target_loc, link_loc)
+    new_dis.append(target_loc)
+    
+
+print(get_distance_of_bodies(r, c, 'fingers'))
+print('=========================')
+print(new_dis)
 
 while True:
     p.stepSimulation()

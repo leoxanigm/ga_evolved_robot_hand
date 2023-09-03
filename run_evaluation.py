@@ -10,9 +10,14 @@ from simulation import Simulation, ThreadedSim
 
 from helpers.misc_helpers import write_csv, clear_training_dir
 
-write_csv('log.csv', ['iteration_id', 'total_run_time(s)'])
+# Current time for the name of log file
+t = time.localtime()
+t_log = f'{t.tm_mon}{t.tm_mday}{t.tm_hour}{t.tm_min}'
 
-for j in range(50):  # run 50 evaluations
+# Log file
+write_csv(f'log/{t_log}_log.csv', ['iteration_id', 'total_run_time(s)'])
+
+for j in range(1):  # run 50 evaluations
     generation_count = 50  # for 50 generations
     population_count = 100  # of 100 specimen each
 
@@ -22,6 +27,9 @@ for j in range(50):  # run 50 evaluations
         f'fit_specimen/{run_id}.csv',
         ['generation_id', 'generation_index', 'average_fitness'],
     )
+
+    # clean training directory
+    clear_training_dir()
 
     start_time = time.time()
 
@@ -59,6 +67,8 @@ for j in range(50):  # run 50 evaluations
             [generation_id, i, pop_avg_fitness],
         )
 
-        clear_training_dir()
+    # clean training directory
+    clear_training_dir()
 
-    write_csv('log.csv', [j, time.time() - start_time])
+    # Write log for current iteration
+    write_csv(f'log/{t_log}_log.csv', [time.ctime(), time.time() - start_time])

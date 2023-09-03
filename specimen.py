@@ -148,6 +148,7 @@ class Specimen:
         action: str,
         body_id: int,
         get_distances: FunctionType,
+        get_target_angle: FunctionType,
         p_id: int,
     ):
         '''
@@ -165,10 +166,6 @@ class Specimen:
 
         distances = get_distances()
 
-        # Length of the target angles list should be the same as
-        # the number of finger links
-        target_angles = [(0, index) for d, index in distances]
-
         link_index = 0  # Keep track of link indices
         for finger in self.fingers:
             if np.all(finger == 0):
@@ -185,9 +182,9 @@ class Specimen:
                 if action == 'ready_to_pick' or action == 'drop':
                     # Spread out the fingers
                     if i == 0:
-                        target_angle = np.pi / 4
+                        output_angle = np.pi / 4
                     else:
-                        target_angle = 0
+                        output_angle = 0
                 else:
                     # Model calculates the target angles
 
@@ -202,19 +199,29 @@ class Specimen:
                     z_axis = phalanx[GeneDesc.JOINT_AXIS_Z]
 
                     # Center of mass is a the midpoint
-                    center_of_mass += phalanx[GeneDesc.DIM_Z] / 2
+                    center_of_mass -= phalanx[GeneDesc.DIM_Z] / 2
 
-                    target_angle = self.brain.move(
+                    output_angle = self.brain.move(
                         [distance, x_axis, y_axis, z_axis, center_of_mass]
                     )
 
-                    target_angle = target_angle.tolist()[0]
-
                     # Move center of mass to the bottom (from the center of the phalanx)
                     # as a reference point for the next phalanx
-                    center_of_mass += phalanx[GeneDesc.DIM_Z] / 2
+                    center_of_mass -= phalanx[GeneDesc.DIM_Z] / 2
 
-                apply_rotation(body_id, distances[link_index][1], target_angle, p_id)
+                    # Learning stage
+                    # Get target angle for the current phalanx
+                    target_angle = get_target_angle(
+                        center_of_mass, distances[link_index][1]
+                    )
+
+                    self.brain.learn(target_angle)
+
+                    # Update brain genome with optimized genome encoding
+                    self._brain_genome = self.brain.genome
+
+
+                apply_rotation(body_id, distances[link_index][1], output_angle, p_id)
 
                 link_index += 1
 

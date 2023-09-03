@@ -1,3 +1,7 @@
+from typing import Union
+import math
+
+
 def calculate_box_mass(x, y, z, density=300):
     '''
     Calculates mass for the phalanges with rectangular shape
@@ -39,3 +43,17 @@ def normalize(val, t_min, t_max, r_min=0, r_max=1):
         r_max: original range maximum
     '''
     return ((t_max - t_min) / (r_max - r_min) * (val - r_min)) + t_min
+
+
+def distance_between_coordinates(a, b):
+    '''Calculates distance between two coordinates in 3D space'''
+    assert issubclass(type(a), Union[list, tuple]) and issubclass(
+        type(b), Union[list, tuple]
+    )
+    assert len(a) == 3 and len(b)
+
+    dx = b[0] - a[0]
+    dy = b[1] - a[1]
+    dz = b[2] - a[2]
+    dist = math.sqrt(dx**2 + dy**2 + dz**2)
+    return dist

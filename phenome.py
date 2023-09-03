@@ -287,7 +287,8 @@ class BrainPhenome:
         parameters = []
 
         for i, layer_parameters in enumerate(self.model_layers.parameters()):
-            np_parameters = np.array(layer_parameters.data)
+            tensor_parameters = layer_parameters.clone().detach()
+            np_parameters = np.array(tensor_parameters)
             if i % 2 == 0:  # Transpose weights
                 np_parameters = np_parameters.T
 
@@ -295,7 +296,7 @@ class BrainPhenome:
 
         self.genome = parameters
 
-    def move(self, input):
+    def move(self, input: list) -> float:
         '''Returns rotation angle based on input
 
         Args:
@@ -323,9 +324,9 @@ class BrainPhenome:
 
         self.output = output
 
-        return self.output
+        return self.output.tolist()[0]
 
-    def learn(self, target: list[float]):
+    def learn(self, target: float):
         '''
         Optimize the weights and biases of the brain based on desired
         rotation angle
@@ -334,17 +335,18 @@ class BrainPhenome:
             target (list[float]): the target rotation angle
         '''
 
-        assert isinstance(target, list)
-        assert len(target) == 1
+        assert isinstance(target, float)
         assert self.output is not None
 
-        target = torch.tensor(target, dtype=torch.float32)
+        target = torch.tensor([target], dtype=torch.float32)
 
         loss = self.loss_fn(self.output, target)
 
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+
+        self.output = self.output.detach()
 
         # Update genome layer with optimized weights
         self.__model_to_genome()

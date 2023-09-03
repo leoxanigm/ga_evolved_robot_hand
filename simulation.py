@@ -4,7 +4,11 @@ import numpy as np
 from multiprocessing import Pool
 import time
 
-from helpers.pybullet_helpers import get_distance_of_bodies, apply_rotation
+from helpers.pybullet_helpers import (
+    get_distance_of_bodies,
+    apply_rotation,
+    calculate_rotation_angle,
+)
 
 from population import Population
 from specimen import Specimen
@@ -70,8 +74,12 @@ class Simulation:
         # Load target objects and separate them by a certain distance
         for pos, urdf_file in enumerate(object_URDF):
             body = p.loadURDF(f'objects/{urdf_file}', physicsClientId=self.p_id)
+
+            # For the object to sit perfectly on the table, we get the object's
+            # base z coordinate and add the table top position
             body_top_z = p.getAABB(body, physicsClientId=self.p_id)[1][2]
             body_z_pos = table_top_z + body_top_z
+
             p.resetBasePositionAndOrientation(
                 body, [0.8, -pos, body_z_pos], [0, 0, 0, 1], physicsClientId=self.p_id
             )
@@ -101,7 +109,10 @@ class Simulation:
             return
 
         next_target = self.target_objects[0]
+
         # Get the current position and orientation of the next target as lists
+        # getBasePositionAndOrientation() returns a tuple of tuples. Conversion
+        # to list is required so as to modify next_pos's first value
         next_pos, next_orientation = map(
             list,
             p.getBasePositionAndOrientation(next_target, physicsClientId=self.p_id),
@@ -117,7 +128,8 @@ class Simulation:
         )
 
     def __get_distances(self, link_type='fingers') -> list[tuple[float, int]]:
-        '''Returns a list of distances and their corresponding link index
+        '''
+        Returns a list of distances and their corresponding link index
         for phalanx links or palm from the target object.
         Args:
             link_type (str): either fingers or palm
@@ -125,6 +137,19 @@ class Simulation:
 
         return get_distance_of_bodies(
             self.robot, self.target_objects[0], link_type, self.p_id
+        )
+
+    def __get_target_angle(self, link_length, link_index) -> list[float]:
+        '''
+        Calculates the target angle a phalanx should follow based on the
+        location of the phalanx link in the simulation and its distance from
+        the target object
+        Args:
+            link_length: current coordinates of the base of the link
+            link_index: link index in the simulation
+        '''
+        return calculate_rotation_angle(
+            self.robot, self.target_objects[0], link_length, link_index, self.p_id
         )
 
     def run_specimen(self, specimen: Specimen, in_training=True):
@@ -147,14 +172,25 @@ class Simulation:
 
             # Spread out the fingers to ready to pick position
             specimen.move_fingers(
-                'ready_to_pick', self.robot, self.__get_distances, self.p_id
+                'ready_to_pick',
+                self.robot,
+                self.__get_distances,
+                self.__get_target_angle,
+                self.p_id,
             )
 
             # Move robot arm to pick up location
             specimen.move_arm('pick', self.robot, self.p_id)
 
-            # Pick up the target object
-            specimen.move_fingers('pick', self.robot, self.__get_distances, self.p_id)
+            for _ in range(5): # The brain learns to pick up for 5 epochs
+                # Pick up the target object
+                specimen.move_fingers(
+                    'pick',
+                    self.robot,
+                    self.__get_distances,
+                    self.__get_target_angle,
+                    self.p_id,
+                )
 
             # Calculate fitness for the fingers
             specimen.calc_fitness(self.__get_distances, 'fingers')
@@ -170,7 +206,11 @@ class Simulation:
 
             # Drop object
             specimen.move_fingers(
-                'ready_to_pick', self.robot, self.__get_distances, self.p_id
+                'ready_to_pick',
+                self.robot,
+                self.__get_distances,
+                self.__get_target_angle,
+                self.p_id,
             )
 
             # Move robot arm to drop off location
