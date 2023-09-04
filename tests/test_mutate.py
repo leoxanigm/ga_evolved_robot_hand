@@ -10,7 +10,7 @@ from cross_mutate import CrossFingers, CrossBrain, MutateBrain, MutateFingers
 
 class TestMutateBrain(unittest.TestCase):
     def test_mutate(self):
-        genome = BrainGenome().genome
+        genome = BrainGenome.genome()
         mutated = MutateBrain.mutate(genome)
 
         different_from_original = False
@@ -23,7 +23,7 @@ class TestMutateBrain(unittest.TestCase):
 
 class TestMutateFingers(unittest.TestCase):
     def test_mutate(self):
-        genome = FingersGenome(GeneDesc).genome
+        genome = FingersGenome.genome(GeneDesc)
         mutated = MutateFingers.mutate(genome)
 
         assert not np.all(mutated == genome)

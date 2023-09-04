@@ -27,8 +27,8 @@ class TestSpecimen(unittest.TestCase):
 
     @given(fingers=st.integers(3, 10), phalanges=st.integers(3, 20))
     def test_set_genomes(self, fingers, phalanges):
-        fingers_genome = FingersGenome(GeneDesc, rows=fingers, columns=phalanges).genome
-        brain_genome = BrainGenome().genome
+        fingers_genome = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
+        brain_genome = BrainGenome.genome()
 
         specimen = Specimen(
             GeneDesc,

@@ -10,7 +10,7 @@ from constants import GeneDesc
 class FingersGenomeTest(unittest.TestCase):
     @given(fingers=st.integers(3, 10), phalanges=st.integers(3, 20))
     def test_random_genome_matrix(self, fingers, phalanges):
-        fingers_genome = FingersGenome(GeneDesc, rows=fingers, columns=phalanges).genome
+        fingers_genome = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
 
         assert isinstance(fingers_genome, np.ndarray)
         assert fingers_genome.shape == (fingers, phalanges, len(GeneDesc))
@@ -19,7 +19,7 @@ class FingersGenomeTest(unittest.TestCase):
 
 class BrainGenomeTest(unittest.TestCase):
     def test_random_genome(self):
-        brain_genome = BrainGenome(layers=[(5, 8), (8, 1)]).genome
+        brain_genome = BrainGenome.genome(layers=[(5, 8), (8, 1)])
 
         assert isinstance(brain_genome, list)
         assert isinstance(brain_genome[0], np.ndarray)

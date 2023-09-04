@@ -97,7 +97,7 @@ class Specimen:
             self.fingers = self.fingers_phenome.phenome
         else:
             # Initialize random fingers genome
-            fingers_genome = FingersGenome(self.gene_desc).genome
+            fingers_genome = FingersGenome.genome(self.gene_desc)
 
             self.fingers_phenome = FingersPhenome(fingers_genome)
             self.fingers = self.fingers_phenome.phenome
@@ -137,7 +137,7 @@ class Specimen:
             self.brain = BrainPhenome(brain_genome)
         else:
             # Initialize random brain genome
-            brain_genome = BrainGenome().genome
+            brain_genome = BrainGenome.genome()
 
         self.brain = BrainPhenome(brain_genome)
 

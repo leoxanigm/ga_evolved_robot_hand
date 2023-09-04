@@ -14,8 +14,8 @@ class TestCrossFingers(unittest.TestCase):
         '''Test the child of two genomes of a given shape has the same
         shape as its parents'''
 
-        genome_1 = FingersGenome(GeneDesc, rows=fingers, columns=phalanges).genome
-        genome_2 = FingersGenome(GeneDesc, rows=fingers, columns=phalanges).genome
+        genome_1 = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
+        genome_2 = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
 
         child = CrossFingers.cross_genomes(genome_1, genome_2)
 
@@ -35,8 +35,8 @@ class TestCrossFingers(unittest.TestCase):
         amount of fingers.
         '''
 
-        genome_1 = FingersGenome(GeneDesc, rows=fingers, columns=phalanges).genome
-        genome_2 = FingersGenome(GeneDesc, rows=fingers, columns=phalanges).genome
+        genome_1 = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
+        genome_2 = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
 
         # Purposefully make genome_2 have only two fingers so that the crossing
         # will likely yield the unwanted finger structure
@@ -65,8 +65,8 @@ class TestCrossFingers(unittest.TestCase):
         parents with different amount of phalanges.
         '''
 
-        genome_1 = FingersGenome(GeneDesc, rows=fingers, columns=phalanges).genome
-        genome_2 = FingersGenome(GeneDesc, rows=fingers, columns=phalanges).genome
+        genome_1 = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
+        genome_2 = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
 
         child = CrossFingers.cross_genomes(genome_1, genome_2)
 
@@ -86,8 +86,8 @@ class TestCrossBrain:
         self.inputs = inputs
         self.hidden = hidden
         self.outputs = outputs
-        self.genome_1 = BrainGenome(layers=[(inputs, hidden),(hidden, outputs)]).genome
-        self.genome_2 = BrainGenome(layers=[(inputs, hidden),(hidden, outputs)]).genome
+        self.genome_1 = BrainGenome.genome(layers=[(inputs, hidden),(hidden, outputs)])
+        self.genome_2 = BrainGenome.genome(layers=[(inputs, hidden),(hidden, outputs)])
 
         self.child = CrossBrain.cross_genomes(self.genome_1, self.genome_2)
 

@@ -12,7 +12,7 @@ class TestFingersPhenome(unittest.TestCase):
     palm_dim = 0.25  # robot palm size
 
     def setUp(self):
-        self.fingers_genome = FingersGenome(GeneDesc).genome
+        self.fingers_genome = FingersGenome.genome(GeneDesc)
         self.fingers_phenome = FingersPhenome(self.fingers_genome).phenome
 
     def test_set_list_dimensions(self):
@@ -62,7 +62,7 @@ class TestFingersPhenome(unittest.TestCase):
 
 class TestBrainPhenome(unittest.TestCase):
     def test_model_to_genome(self):
-        brain_genome = BrainGenome().genome
+        brain_genome = BrainGenome.genome()
         brain_phenome = BrainPhenome(brain_genome)
         model_layers = []
         
@@ -78,12 +78,12 @@ class TestBrainPhenome(unittest.TestCase):
             assert np.all(model_layer == brain_genome[i])
 
     def test_genome_update_after_learn(self):
-        brain_genome = BrainGenome().genome
+        brain_genome = BrainGenome.genome()
         brain_phenome = BrainPhenome(brain_genome)
 
         output = brain_phenome.move([0.13, 0, 1, 0, 0.185])
         target = -np.arctan(0.13/0.185)
-        brain_phenome.learn([target])
+        brain_phenome.learn(target)
 
         new_brain_genome = brain_phenome.genome
 
