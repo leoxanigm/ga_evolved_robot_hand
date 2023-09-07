@@ -18,15 +18,28 @@ class FingersGenomeTest(unittest.TestCase):
 
 
 class BrainGenomeTest(unittest.TestCase):
-    def test_random_genome(self):
-        brain_genome = BrainGenome.genome(layers=[(5, 8), (8, 1)])
+    @given(
+        fingers=st.integers(3, 10),
+        phalanges=st.integers(3, 20),
+        num_inputs=st.integers(3, 7),
+    )
+    def test_convolution_matrix(self, fingers, phalanges, num_inputs):
+        fingers_genome = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
+        brain_genome = BrainGenome.genome(fingers_genome, num_inputs)
 
-        assert isinstance(brain_genome, list)
-        assert isinstance(brain_genome[0], np.ndarray)
-        assert brain_genome[0].shape == (5, 8)
-        assert brain_genome[1].shape == (8, )
-        assert brain_genome[2].shape == (8, 1)
-        assert brain_genome[3].shape == (1, )
+        assert isinstance(brain_genome, np.ndarray)
+        assert brain_genome.shape == (fingers, phalanges, fingers, phalanges, num_inputs)
+
+        inputs = np.random.randint(0, 2, size=(*brain_genome.shape[:2], num_inputs))
+        outputs = np.sum(inputs * brain_genome, axis=(2, 3, 4))
+
+        assert outputs.shape == (*brain_genome.shape[:2], )
+
+        # All zero inputs must return no rotation (0)
+        inputs = np.zeros((*brain_genome.shape[:2], num_inputs))
+        outputs = np.sum(inputs * brain_genome, axis=(2, 3, 4))
+
+        assert np.all(outputs == 0)
 
 
 if __name__ == '__main__':

@@ -68,60 +68,37 @@ class FingersGenome:
 
 class BrainGenome:
     @staticmethod
-    def genome(layers=[(5, 8), (8, 1)]):
+    def genome(genome_matrix, num_inputs=3) -> np.ndarray:
         '''
         Genetic coding for the brain.
-        This represents the parameters (weights and biases) of the hidden
-        neurons for the neural network control mechanism.
+        This represents the parameters (weights) of the convolution matrix.
+        The shape of the matrix is decided by the shape of genome_matrix.
 
-        The brain calculates the target rotation angle for each phalanx.
-        The neural network will get the inputs:
-            Distance of a phalanx from the target object:
-                Calculated using PyBullet's getClosestPoints().
-            Rotation axis:
-                The rotational axis of a phalanx in the shape [x, y, z]
-            Distance of the center of mass of a phalanx from the palm:
-
-        The input will be tensor of length five. The first index is the distance
-        from the target object, indices 1, 2, and 3 are a the axis of rotation
-        (For example, an input of 1,0,0 means the phalanx rotates around x axis),
-        and the last index is the distance of center of mass of the phalanx from
-        the palm.
-
-        The outputs will a rotation angle for each phalanx.
+        The brain decides the rotation direction of a phalanx: either +ve, 
+        -ve or no rotation. It takes a tuple of binary inputs for each phalanx
+        that have structure (distance [1/0], collision with target [1/0]) and
+        (collision with obstacle [1/0]). It multiples the inputs for all
+        phalanges with a convolution matrix of a phalanx and outputs rotation
+        direction for the said phalanx.
 
         Args:
-            layers: A list containing the number of neurons for the hidden layers.
-                Default is for a neural network with 1 hidden layer of 8
-                neurons.
+            genome_matrix: genome encoding for the fingers
+            num_inputs: number of inputs
         '''
-
-        return BrainGenome.__generate_default_genome_array(layers)
+        assert isinstance(genome_matrix, np.ndarray)
+        shape = genome_matrix.shape
+        return BrainGenome.__generate_convolution_matrix(shape, num_inputs)
 
     @staticmethod
-    def __generate_default_genome_array(layers):
+    def __generate_convolution_matrix(shape: tuple, num_inputs: int) -> np.ndarray:
         '''
-        Returns a list of numpy arrays with shapes defined by layers input,
-        The numpy arrays represent weights and biases.
-        For the default configuration, it returns a random float list of
-        numpy arrays with shape: [(5, 8), (8,), (8, 1), (1,)]
+        Returns a convolution matrix with random weights with shape
+        the same as input.
         '''
-        assert type(layers) == list
+        
+        # Take number of finger and phalanges. Size of weight array equals
+        # number of inputs
+        size = (*shape[:2], *shape[:2], num_inputs)
+        convolution_matrix = np.random.uniform(low=-0.5, high=0.5, size=size)
 
-        genome_array = []
-
-        for i, j in layers:
-            # The random values will be initialized based on in-features and
-            # out-features to follow how weights and biases are initialized
-            # for PyTorch Linear layer models.
-            # Source: https://pytorch.org/docs/stable/generated/torch.nn.Linear.html
-            rand_range = np.sqrt(1 / i)
-            random_weights = np.random.uniform(-rand_range, rand_range, (i, j))
-            random_weights = random_weights.astype(np.float32)
-            genome_array.append(random_weights)  # weights
-
-            random_biases = np.random.uniform(-rand_range, rand_range, (j,))
-            random_biases = random_biases.astype(np.float32)
-            genome_array.append(random_biases)  # biases
-
-        return genome_array
+        return convolution_matrix
