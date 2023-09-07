@@ -5,12 +5,22 @@ from types import FunctionType
 import time
 import pybullet as p
 from operator import add
+from collections import namedtuple
 
 from genome import FingersGenome, BrainGenome
 from phenome import FingersPhenome, BrainPhenome
 from generate_urdf import GenerateURDF
 from constants import GeneDesc, ROBOT_HAND, TRAINING_DIR
 from helpers.pybullet_helpers import apply_rotation
+
+
+class Phalanx:
+    def __init__(self, finger_index, phalanx_index, link_index, inputs=[], output=0):
+        self.finger_index = finger_index
+        self.phalanx_index = phalanx_index
+        self.link_index = link_index
+        self.inputs = inputs
+        self.output = output
 
 
 class Specimen:
@@ -40,12 +50,14 @@ class Specimen:
     prev_arm_angles = []  # Keeps track of previously applied angles for the arm
     prev_finger_angles = []  # Keeps track of previously applied angles for fingers
 
+    angle_increment = np.pi / 16  # How much angle each phalanx moves at a time
+
     def __init__(
         self,
         gene_description=GeneDesc,
         robot_hand: str = ROBOT_HAND,
         fingers_genome: np.ndarray = None,
-        brain_genome: list[np.ndarray] = None,
+        brain_genome: list = None,
         generation_id: str = None,
         specimen_id: str = None,
     ):
@@ -57,50 +69,61 @@ class Specimen:
         self._fingers_genome = None
         self._brain_genome = None
 
+        self.phalanges: list[Phalanx] = []
+
         # Assign a unique id
         # Use first 8 characters to avoid long file names
         self.id = str(uuid.uuid4())[:8]
 
         if generation_id and specimen_id:  # Specimen from saved data
             # Initialize saved specimen
-            self.__init_fingers(generation_id=generation_id, specimen_id=specimen_id)
-            self.__init_brain(generation_id=generation_id, specimen_id=specimen_id)
+            self.__init_state(generation_id=generation_id, specimen_id=specimen_id)
         elif fingers_genome is not None and brain_genome is not None:
             # Initialize specimen from provided genomes
-            self.__init_fingers(
-                fingers_genome=fingers_genome, brain_genome=brain_genome
-            )
-            self.__init_brain(fingers_genome=fingers_genome, brain_genome=brain_genome)
+            self.__init_state(fingers_genome=fingers_genome, brain_genome=brain_genome)
         else:  # New specimen
             # Initialize new specimen
-            self.__init_fingers()
-            self.__init_brain()
+            self.__init_state()
 
-    def __init_fingers(
+    def __init_state(
         self,
         fingers_genome=None,
         brain_genome=None,
         generation_id: str = None,
         specimen_id: str = None,
     ):
-        if generation_id and specimen_id:  # Load fingers from saved pickle dump
+        if generation_id and specimen_id:
+            # Load fingers from saved pickle dump
             self.fingers_phenome = FingersPhenome()
             self.fingers = self.fingers_phenome.load_genome(
                 f'fit_specimen/genome_encodings/{generation_id}_fingers_{specimen_id}.pickle'
             )
 
             self.specimen_URDF = f'{generation_id}_{specimen_id}.urdf'
+
+            # Load brain from saved pickle dump
+            self.brain = BrainPhenome()
+            self.brain.load_genome(
+                f'fit_specimen/genome_encodings/{generation_id}_brain_{specimen_id}.pickle'
+            )
+
             return
 
         if fingers_genome is not None and brain_genome is not None:
             self.fingers_phenome = FingersPhenome(fingers_genome)
             self.fingers = self.fingers_phenome.phenome
+
+            self.brain = BrainPhenome(brain_genome)
+
         else:
             # Initialize random fingers genome
             fingers_genome = FingersGenome.genome(self.gene_desc)
 
             self.fingers_phenome = FingersPhenome(fingers_genome)
             self.fingers = self.fingers_phenome.phenome
+
+            # Initialize random brain genome
+            brain_genome = BrainGenome.genome(fingers_genome)
 
         # Write fingers URDF definition file
         training_folder_path = TRAINING_DIR
@@ -119,111 +142,103 @@ class Specimen:
 
         self._fingers_genome = self.fingers_phenome.genome
 
-    def __init_brain(
-        self,
-        fingers_genome=None,
-        brain_genome=None,
-        generation_id: str = None,
-        specimen_id: str = None,
-    ):
-        if generation_id and specimen_id:  # Load brain from saved pickle dump
-            self.brain = BrainPhenome()
-            self.brain.load_genome(
-                f'fit_specimen/genome_encodings/{generation_id}_brain_{specimen_id}.pickle'
-            )
-            return
-
-        if brain_genome is not None:
-            self.brain = BrainPhenome(brain_genome)
-        else:
-            # Initialize random brain genome
-            brain_genome = BrainGenome.genome()
-
         self.brain = BrainPhenome(brain_genome)
-
         self._brain_genome = self.brain.genome
+
+    def load_state(self, genome_link_indices: list[tuple]):
+        '''Loads genome indices (fingers and phalanges) and link indices to
+        the phalanges state'''
+
+        assert isinstance(genome_link_indices, list)
+        assert len(genome_link_indices) > 0
+
+        # Populate state for phalanges
+        for (finger_index, phalanx_index), link_index in genome_link_indices:
+            self.phalanges.append(Phalanx(finger_index, phalanx_index, link_index))
 
     def move_fingers(
         self,
         action: str,
         body_id: int,
         get_distances: FunctionType,
-        get_target_angle: FunctionType,
+        get_collisions: FunctionType,
         p_id: int,
+        iteration: int = 0,
     ):
         '''
-        Moves the fingers to the specified target angles.
+        Moves the fingers based on inputs retrieved from callback functions.
+        The inputs are: distance from the target object, contact with target
+        object and contact with table.
 
         Args:
             action (str): the current state of the arm
             body_id (int): the specimen body id in the PyBullet simulation
-            get_distances (function): a callback function to get distance of
+            get_distances (function): callback function to get distance of
                 each phalanx from the target object
+            get_collisions (function): callback function to get collision
+                of a phalanx - target object and phalanx - table. It returns
+                a tuple with boolean values 0/1 for (target, table)
+            iteration (int): the current iteration in the movement steps
             p_id (int): PyBullet connected server's simulation id
         '''
-        # Center of mass distance of each phalanx from the palm
-        center_of_mass = 0
 
-        distances = get_distances()
-
-        link_index = 0  # Keep track of link indices
-        for finger in self.fingers:
-            if np.all(finger == 0):
-                # No need to continue looping as the rest of array elements will be zero
-                break
-            for i, phalanx in enumerate(finger):
-                if np.all(phalanx == 0):
-                    break
-
-                # Moving a parent phalanx will also move the child.
-                # So we have to get distances for each iteration
-                distances = get_distances()
-
-                if action == 'ready_to_pick' or action == 'drop':
+        p.stepSimulation(physicsClientId=p_id)
+        if action == 'ready_to_pick' or action == 'drop':
+            for phalanx in self.phalanges:
+                if phalanx.phalanx_index == 0:
                     # Spread out the fingers
-                    if i == 0:
-                        output_angle = np.pi / 4
-                    else:
-                        output_angle = 0
+                    phalanx.output = np.pi / 4
                 else:
-                    # Model calculates the target angles
+                    phalanx.output = 0
+        elif action == 'pick' and iteration == 0:
+            # For the first iteration of the grabbing steps, move the
+            # phalanges in a straight position
+            for phalanx in self.phalanges:
+                phalanx.output = 0
+        else:
+            for phalanx in self.phalanges:
+                link_index = phalanx.link_index
+                distances = get_distances(link_index)
+                collisions = get_collisions(link_index)
+                phalanx.inputs = [distances, *collisions]
 
-                    # Get distance for this phalanx
-                    # distances[i] is a tuple, (distance, index) and we only want
-                    # the first element
-                    distance = distances[link_index][0]
+            time.sleep(30)
 
-                    # Axes of rotation. Either 0 or 1
-                    x_axis = phalanx[GeneDesc.JOINT_AXIS_X]
-                    y_axis = phalanx[GeneDesc.JOINT_AXIS_Y]
-                    z_axis = phalanx[GeneDesc.JOINT_AXIS_Z]
+            # Get shapes to construct input np array
+            genome_shape = self.fingers_genome.shape[:2]
+            input_shape = len(self.phalanges[0].inputs)
 
-                    # Center of mass is a the midpoint
-                    center_of_mass -= phalanx[GeneDesc.DIM_Z] / 2
+            # Initialize the input array with zeros
+            inputs = np.zeros((*genome_shape, input_shape))
 
-                    output_angle = self.brain.move(
-                        [distance, x_axis, y_axis, z_axis, center_of_mass]
-                    )
+            # Populate the inputs
+            for phalanx in self.phalanges:
+                f_i = phalanx.finger_index
+                p_i = phalanx.phalanx_index
 
-                    # Move center of mass to the bottom (from the center of the phalanx)
-                    # as a reference point for the next phalanx
-                    center_of_mass -= phalanx[GeneDesc.DIM_Z] / 2
+                inputs[f_i][p_i] = np.array(phalanx.inputs)
 
-                    # Learning stage
-                    # Get target angle for the current phalanx
-                    target_angle = get_target_angle(
-                        center_of_mass, distances[link_index][1]
-                    )
+            # print('===============')
+            # print(f'inputs {inputs}')
 
-                    self.brain.learn(target_angle)
+            # Get trajectories
+            outputs = self.brain.trajectories(inputs)
 
-                    # Update brain genome with optimized genome encoding
-                    self._brain_genome = self.brain.genome
+            # print(f'outputs {outputs}')
+            # print('===============')
+
+            # Populate output
+            for phalanx in self.phalanges:
+                f_i = phalanx.finger_index
+                p_i = phalanx.phalanx_index
+
+                phalanx.output += (outputs[f_i][p_i] * self.angle_increment)
+
+        link_indices = [p.link_index for p in self.phalanges]
+        target_angles = [p.output for p in self.phalanges]
 
 
-                apply_rotation(body_id, distances[link_index][1], output_angle, p_id)
-
-                link_index += 1
+        apply_rotation(body_id, link_indices, target_angles, p_id)
 
     def move_arm(
         self,

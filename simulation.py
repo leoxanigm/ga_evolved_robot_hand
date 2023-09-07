@@ -4,10 +4,13 @@ import numpy as np
 from multiprocessing import Pool
 import time
 
+from typing import Literal
+
 from helpers.pybullet_helpers import (
     get_distance_of_bodies,
     apply_rotation,
-    calculate_rotation_angle,
+    check_collisions,
+    get_genome_link_indices,
 )
 
 from population import Population
@@ -36,6 +39,10 @@ class Simulation:
         # The PyBullet ID of the specimen in the simulation
         self.robot = None
 
+        # Serves as a spot where target object can be placed and
+        # as an obstacle to avoid for the fingers
+        self.table = None
+
         # List of target object ids
         self.target_objects = []
 
@@ -58,16 +65,16 @@ class Simulation:
         floor = p.createMultiBody(plane_shape, plane_shape, physicsClientId=self.p_id)
 
         # Load table to place target objects on
-        table = p.loadURDF(
+        self.table = p.loadURDF(
             'objects/table.urdf', useFixedBase=1, physicsClientId=self.p_id
         )
         p.resetBasePositionAndOrientation(
-            table, [0.8, -2, 0], [0, 0, 0, 1], physicsClientId=self.p_id
+            self.table, [0.8, -2, 0], [0, 0, 0, 1], physicsClientId=self.p_id
         )
         # Get table top position
         table_top_z = p.getAABB(
-            table,
-            p.getNumJoints(table, physicsClientId=self.p_id) - 1,
+            self.table,
+            p.getNumJoints(self.table, physicsClientId=self.p_id) - 1,
             physicsClientId=self.p_id,
         )[1][2]
 
@@ -127,29 +134,32 @@ class Simulation:
             physicsClientId=self.p_id,
         )
 
-    def __get_distances(self, link_type='fingers') -> list[tuple[float, int]]:
+    def __get_distances(self, link_index) -> float:
         '''
-        Returns a list of distances and their corresponding link index
-        for phalanx links or palm from the target object.
+        Returns a distance for a specified link in the robot hand.
+
         Args:
-            link_type (str): either fingers or palm
+            link_index (int): link index in the simulation
         '''
 
         return get_distance_of_bodies(
-            self.robot, self.target_objects[0], link_type, self.p_id
+            self.robot, self.target_objects[0], link_index, self.p_id
         )
 
-    def __get_target_angle(self, link_length, link_index) -> list[float]:
+    def __get_collisions(self, link_index) -> tuple[Literal[0, 1], Literal[0, 1]]:
         '''
-        Calculates the target angle a phalanx should follow based on the
-        location of the phalanx link in the simulation and its distance from
-        the target object
+        Checks for a contact between a phalanx - target object and
+        a phalanx - table
+
         Args:
-            link_length: current coordinates of the base of the link
-            link_index: link index in the simulation
+            link_index (int): link indices in the simulation
+
+        Returns:
+            A tuple of binary values for target and table collision
+            respectively.
         '''
-        return calculate_rotation_angle(
-            self.robot, self.target_objects[0], link_length, link_index, self.p_id
+        return check_collisions(
+            self.robot, self.target_objects[0], self.table, link_index, self.p_id
         )
 
     def run_specimen(self, specimen: Specimen, in_training=True):
@@ -165,6 +175,11 @@ class Simulation:
                 urdf_file, useFixedBase=1, physicsClientId=self.p_id
             )
 
+        p.stepSimulation(physicsClientId=self.p_id)
+
+        # Populate phalanx state with link index
+        specimen.load_state(get_genome_link_indices(self.robot, self.p_id))
+
         # Iterate over all target objects
         while len(self.target_objects) > 0:
             # Move robot arm to ready to pick location
@@ -175,25 +190,27 @@ class Simulation:
                 'ready_to_pick',
                 self.robot,
                 self.__get_distances,
-                self.__get_target_angle,
+                self.__get_collisions,
                 self.p_id,
             )
 
             # Move robot arm to pick up location
             specimen.move_arm('pick', self.robot, self.p_id)
 
-            for _ in range(5): # The brain learns to pick up for 5 epochs
+            # The grabbing motion is performed by some steps
+            for i in range(5):
                 # Pick up the target object
                 specimen.move_fingers(
                     'pick',
                     self.robot,
                     self.__get_distances,
-                    self.__get_target_angle,
+                    self.__get_collisions,
                     self.p_id,
+                    i,
                 )
 
             # Calculate fitness for the fingers
-            specimen.calc_fitness(self.__get_distances, 'fingers')
+            # specimen.calc_fitness(self.__get_distances, 'fingers')
 
             # Move robot arm back to ready to pick location
             specimen.move_arm('ready_to_pick', self.robot, self.p_id)
@@ -202,14 +219,14 @@ class Simulation:
             specimen.move_arm('drop', self.robot, self.p_id)
 
             # Calculate fitness for the whole arm
-            specimen.calc_fitness(self.__get_distances)
+            # specimen.calc_fitness(self.__get_distances)
 
             # Drop object
             specimen.move_fingers(
                 'ready_to_pick',
                 self.robot,
                 self.__get_distances,
-                self.__get_target_angle,
+                self.__get_collisions,
                 self.p_id,
             )
 

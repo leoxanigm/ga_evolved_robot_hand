@@ -30,6 +30,9 @@ def get_genome_link_indices(body_id, p_id) -> list[tuple]:
     Returns a list of tuples with the format ((finger_index, phalanx_index), link_index)
     '''
 
+    # Update simulation state
+    p.stepSimulation(physicsClientId=p_id)
+
     index_list = []
     Indices = namedtuple('Indices', ('genome_index', 'link_index'))
     for i in range(p.getNumJoints(body_id, physicsClientId=p_id)):
@@ -42,50 +45,60 @@ def get_genome_link_indices(body_id, p_id) -> list[tuple]:
     return index_list
 
 
-def get_distance_of_bodies(body_a_id, body_b_id, link_index_a, p_id) -> float:
+def get_distance_of_bodies(body_a_id, body_b_id, link_index, p_id) -> float:
     '''
-    Calculates the distance between two PyBullet bodies.
+    Calculates the distance between two PyBullet bodies, from link_index
+    of the first body.
 
     Args:
         body_a_id (int): robot hand with fingers added
         body_b_id (int): target object to be picked up
-        link_index_a (int): link index of a phalanx on the robot hand
+        link_index (int): link index of a phalanx on the robot hand
         p_id (int): PyBullet physicsClientID
     '''
     assert (
         isinstance(body_a_id, int)
         and isinstance(body_b_id, int)
-        and isinstance(link_index_a, int)
+        and isinstance(link_index, int)
     )
 
-    phalanx_pos = p.getLinkState(body_a_id, link_index_a, physicsClientId=p_id)[0]
+    # Update simulation state
+    # p.stepSimulation(physicsClientId=p_id)
+
+    phalanx_pos = p.getLinkState(body_a_id, link_index, physicsClientId=p_id)[0]
     target_pos = p.getBasePositionAndOrientation(body_b_id, physicsClientId=p_id)[0]
 
-    # Get a location on the surface of target object where the phalanx should
-    # rotate and touch
-    try:
-        target_surface_pos = p.rayTest(phalanx_pos, target_pos, physicsClientId=p_id)[0][3]
-    except IndexError:
-        print('========================')
-        print(phalanx_pos, target_pos, p.rayTest(phalanx_pos, target_pos, physicsClientId=p_id))
-        raise
+    result = p.rayTest(phalanx_pos, target_pos, physicsClientId=p_id)
 
-    return distance_between_coordinates(phalanx_pos, target_surface_pos)
+    if result[0][0] == body_b_id:  # We only want hit positions on the target
+        distance = distance_between_coordinates(phalanx_pos, result[0][3])
+        print(distance)
+        # Normalize distance
+        distance = 0 if distance == 0 else 1
+    else:
+        # If the hit object is not the target, that means it can't get a clear
+        # view. In this case, we don't want to move the phalanx
+        distance = 0
+
+    return distance
 
 
 def check_collisions(
-    body_a_id, body_b_id, body_c_id, link_index_a, p_id
-) -> tuple[Literal[0, 1], Literal[0, 1]]:
+    body_a_id, body_b_id, body_c_id, link_index, p_id
+) -> list[tuple[Literal[0, 1], Literal[0, 1]]]:
     '''
     Checks for collision between body_a - body_b and body_a - body_c.
     The link to be checked in body_a is specified by link_index
     '''
 
+    # Update simulation state
+    p.stepSimulation(physicsClientId=p_id)
+
     target_contact_points = p.getContactPoints(
-        body_a_id, body_b_id, link_index_a, physicsClientId=p_id
+        body_a_id, body_b_id, link_index, physicsClientId=p_id
     )
     obstacle_contact_points = p.getContactPoints(
-        body_a_id, body_c_id, link_index_a, physicsClientId=p_id
+        body_a_id, body_c_id, link_index, physicsClientId=p_id
     )
 
     target_contact = int(len(target_contact_points) > 0)  # int(True) -> 1

@@ -227,8 +227,14 @@ class BrainPhenome:
         assert isinstance(input, np.ndarray)
         assert input.shape == self.brain_genome.shape[2:]
 
+        # Perform convolution transform
         output = input * self.brain_genome
         output = np.sum(output, axis=(2, 3, 4))
+
+        # Map the results to -1, 0 and 1
+        output[output < -0.2] = -1
+        output[output > 0.2] = 1
+        output[(output >= -0.2) & (output <= 0.2)] = 0
 
         return output
 
