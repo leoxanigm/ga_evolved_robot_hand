@@ -2,91 +2,96 @@ import pybullet as p
 import constants as c
 import time
 import math
+from collections import namedtuple
+
+from typing import Literal
 
 from .math_functions import distance_between_coordinates
 
 
-def is_finger_link(body_id, joint_index):
+def is_finger_link(body_id, joint_index, p_id):
     '''Check if a link is a finger'''
     if joint_index == -1:  # base link
         return False
-    return (p.getJointInfo(body_id, joint_index)[12]).startswith(b'finger_')
+    link_name = p.getJointInfo(body_id, joint_index, physicsClientId=p_id)[12]
+    return link_name.startswith(b'finger_')
 
 
-def is_palm_link(body_id, joint_index):
+def is_palm_link(body_id, joint_index, p_id):
     '''Check if a link is palm'''
     if joint_index == -1:  # base link
         return False
-    return (p.getJointInfo(body_id, joint_index)[12]).startswith(b'palm_')
+    link_name = p.getJointInfo(body_id, joint_index, physicsClientId=p_id)[12]
+    return link_name.startswith(b'palm_')
 
 
-def get_distance_of_bodies(
-    body_a_id, body_b_id, link_type, p_id=0
-) -> tuple[float, int]:
+def get_genome_link_indices(body_id, p_id) -> list[tuple]:
+    '''
+    Returns a list of tuples with the format ((finger_index, phalanx_index), link_index)
+    '''
+
+    index_list = []
+    Indices = namedtuple('Indices', ('genome_index', 'link_index'))
+    for i in range(p.getNumJoints(body_id, physicsClientId=p_id)):
+        joint_info = p.getJointInfo(body_id, i, physicsClientId=p_id)
+        link_name = joint_info[12]
+        if link_name.startswith(b'finger_'):
+            link_name_ls = link_name.split(b'_')
+            indices = Indices((int(link_name_ls[2]), int(link_name_ls[3])), i)
+            index_list.append(indices)
+    return index_list
+
+
+def get_distance_of_bodies(body_a_id, body_b_id, link_index_a, p_id) -> float:
     '''
     Calculates the distance between two PyBullet bodies.
+
     Args:
         body_a_id (int): robot hand with fingers added
         body_b_id (int): target object to be picked up
-        link_type (str): which part of body_a we want distances of (fingers/palm)
+        link_index_a (int): link index of a phalanx on the robot hand
         p_id (int): PyBullet physicsClientID
-    Returns:
-        A List tuples with distance of each phalanx from the target object
-        and the joint index
     '''
-    assert isinstance(body_a_id, int) and isinstance(body_b_id, int)
-    if p.getNumJoints(body_a_id) < c.FINGER_START_INDEX:
-        raise ValueError(
-            'body_a_id must be an instance of a robot hand with fingers attached.'
-        )
-
-    # getClosestPoints() returns a list of contact points for each link.
-    # Distance is at index 8, link index for body_a is at index 3
-    closest_points = p.getClosestPoints(
-        body_a_id, body_b_id, 1000, physicsClientId=p_id
+    assert (
+        isinstance(body_a_id, int)
+        and isinstance(body_b_id, int)
+        and isinstance(link_index_a, int)
     )
 
-    if link_type == 'palm':
-        # Distances for the palm
-        return [
-            (points[8], points[3])
-            for points in closest_points
-            if is_palm_link(body_a_id, points[3])  # points[3] is joint index of body_a
-        ]
-    else:  # Distances for the fingers
-        return [
-            (points[8], points[3])
-            for points in closest_points
-            if is_finger_link(
-                body_a_id, points[3]
-            )  # points[3] is joint index of body_a
-        ]
+    phalanx_pos = p.getLinkState(body_a_id, link_index_a, physicsClientId=p_id)[0]
+    target_pos = p.getBasePositionAndOrientation(body_b_id, physicsClientId=p_id)[0]
 
-def calculate_rotation_angle(body_a_id, body_b_id, link_length, link_index, p_id) -> float:
+    # Get a location on the surface of target object where the phalanx should
+    # rotate and touch
+    try:
+        target_surface_pos = p.rayTest(phalanx_pos, target_pos, physicsClientId=p_id)[0][3]
+    except IndexError:
+        print('========================')
+        print(phalanx_pos, target_pos, p.rayTest(phalanx_pos, target_pos, physicsClientId=p_id))
+        raise
+
+    return distance_between_coordinates(phalanx_pos, target_surface_pos)
+
+
+def check_collisions(
+    body_a_id, body_b_id, body_c_id, link_index_a, p_id
+) -> tuple[Literal[0, 1], Literal[0, 1]]:
     '''
-    Calculates angle based on length and distance
-    angle = arctan(distance / length)
-    Args:
-        body_a_id (int): robot hand with fingers added
-        body_b_id (int): target object to be picked up
-        link_length (float): length from palm to base of link
-        link_index (int): link index in the simulation
-        p_id (int): PyBullet physicsClientID
-    Returns:
-        Angle in radians
+    Checks for collision between body_a - body_b and body_a - body_c.
+    The link to be checked in body_a is specified by link_index
     '''
-    link_loc = list(p.getLinkState(body_a_id, link_index, physicsClientId=p_id)[0])  # link location at link origin
-    link_loc[2] -= link_length  # get location of the link's end
 
-    obj_loc = p.getBasePositionAndOrientation(body_b_id, physicsClientId=p_id)[0]
+    target_contact_points = p.getContactPoints(
+        body_a_id, body_b_id, link_index_a, physicsClientId=p_id
+    )
+    obstacle_contact_points = p.getContactPoints(
+        body_a_id, body_c_id, link_index_a, physicsClientId=p_id
+    )
 
-    target_loc = p.rayTest(link_loc, obj_loc, physicsClientId=p_id)  # cast ray from current link to cube
-    target_loc = target_loc[0][3]  # 3'rd index is where the intersection loc is
+    target_contact = int(len(target_contact_points) > 0)  # int(True) -> 1
+    obstacle_contact = int(len(obstacle_contact_points) > 0)
 
-    dis = distance_between_coordinates(target_loc, link_loc)
-    angle = math.atan(dis / link_length)  # target angle
-
-    return angle
+    return target_contact, obstacle_contact
 
 
 def apply_rotation(body_id, joint_index, target_pos, p_id=0, prev_target_pos=None):
