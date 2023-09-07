@@ -1,4 +1,6 @@
 import unittest
+import hypothesis.strategies as st
+from hypothesis import given
 import numpy as np
 
 from genome import FingersGenome, BrainGenome
@@ -61,37 +63,27 @@ class TestFingersPhenome(unittest.TestCase):
                 assert Limits.DIM_Z_LOWER <= phalanx_z <= Limits.DIM_Z_UPPER
 
 class TestBrainPhenome(unittest.TestCase):
-    def test_model_to_genome(self):
-        brain_genome = BrainGenome.genome()
-        brain_phenome = BrainPhenome(brain_genome)
-        model_layers = []
-        
-        for layer in brain_phenome.model_layers.parameters():
-            model_layers.append(np.array(layer.data))
-
-        for i in range(len(model_layers)):
-            model_layer = model_layers[i]
-            if i % 2 == 0:
-                model_layer = model_layer.T
-
-            assert model_layer.shape == brain_genome[i].shape
-            assert np.all(model_layer == brain_genome[i])
-
-    def test_genome_update_after_learn(self):
-        brain_genome = BrainGenome.genome()
+    @given(
+        fingers=st.integers(3, 10),
+        phalanges=st.integers(3, 20),
+        num_inputs=st.integers(3, 7),
+    )
+    def test_brain_trajectories(self, fingers, phalanges, num_inputs):
+        fingers_genome = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
+        brain_genome = BrainGenome.genome(fingers_genome, num_inputs)
         brain_phenome = BrainPhenome(brain_genome)
 
-        output = brain_phenome.move([0.13, 0, 1, 0, 0.185])
-        target = -np.arctan(0.13/0.185)
-        brain_phenome.learn(target)
+        inputs = np.random.randint(0, 2, size=(*brain_genome.shape[:2], num_inputs))
 
-        new_brain_genome = brain_phenome.genome
+        outputs = brain_phenome.trajectories(inputs)
 
-        assert len(new_brain_genome) == len(brain_genome)
+        assert outputs.shape == (*brain_genome.shape[:2], )
 
-        for i in range(len(new_brain_genome)):
-            assert new_brain_genome[i].shape == brain_genome[i].shape
-            assert np.any(new_brain_genome[i] != brain_genome[i])
+        # All zero inputs must return no rotation (0)
+        inputs = np.zeros((*brain_genome.shape[:2], num_inputs))
+        outputs = brain_phenome.trajectories(inputs)
+
+        assert np.all(outputs == 0)
 
 
 if __name__ == '__main__':

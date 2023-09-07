@@ -1,6 +1,4 @@
 import numpy as np
-from torch.nn.parameter import Parameter
-from types import GeneratorType
 
 
 class FingersGenome:
@@ -71,10 +69,9 @@ class BrainGenome:
     def genome(genome_matrix, num_inputs=3) -> np.ndarray:
         '''
         Genetic coding for the brain.
-        This represents the parameters (weights) of the convolution matrix.
         The shape of the matrix is decided by the shape of genome_matrix.
 
-        The brain decides the rotation direction of a phalanx: either +ve, 
+        The brain decides the rotation direction of a phalanx: either +ve,
         -ve or no rotation. It takes a tuple of binary inputs for each phalanx
         that have structure (distance [1/0], collision with target [1/0]) and
         (collision with obstacle [1/0]). It multiples the inputs for all
@@ -95,7 +92,7 @@ class BrainGenome:
         Returns a convolution matrix with random weights with shape
         the same as input.
         '''
-        
+
         # Take number of finger and phalanges. Size of weight array equals
         # number of inputs
         size = (*shape[:2], *shape[:2], num_inputs)

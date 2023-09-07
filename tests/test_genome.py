@@ -30,17 +30,6 @@ class BrainGenomeTest(unittest.TestCase):
         assert isinstance(brain_genome, np.ndarray)
         assert brain_genome.shape == (fingers, phalanges, fingers, phalanges, num_inputs)
 
-        inputs = np.random.randint(0, 2, size=(*brain_genome.shape[:2], num_inputs))
-        outputs = np.sum(inputs * brain_genome, axis=(2, 3, 4))
-
-        assert outputs.shape == (*brain_genome.shape[:2], )
-
-        # All zero inputs must return no rotation (0)
-        inputs = np.zeros((*brain_genome.shape[:2], num_inputs))
-        outputs = np.sum(inputs * brain_genome, axis=(2, 3, 4))
-
-        assert np.all(outputs == 0)
-
 
 if __name__ == '__main__':
     unittest.main()
