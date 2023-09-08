@@ -60,6 +60,10 @@ class FingersPhenome:
     def __modify_genome(self, phenome_matrix: np.ndarray):
         '''Modify values of the default  genome array'''
 
+        dimensions = get_robot_palm_dims(ROBOT_HAND)
+        palm_dim_x = dimensions['x'] / 2
+        palm_dim_y = dimensions['y'] / 2
+
         for i in range(len(phenome_matrix)):  # loop through fingers
             finger = phenome_matrix[i]
 
@@ -67,7 +71,6 @@ class FingersPhenome:
                 # No need to continue looping as the rest of array elements will be zero
                 break
 
-            dimensions = get_robot_palm_dims(ROBOT_HAND)
             parent_dim_z = dimensions['z']  # height of the palm link
             parent_axes = None
 
@@ -83,11 +86,15 @@ class FingersPhenome:
                 self.__set_link_dimensions(phalanx)
 
                 # Modify joint origin
-                new_parent_dim_z = self.__set_joint_origin(phalanx, parent_dim_z, j)
+                new_parent_dim_z = self.__set_joint_origin(
+                    phalanx, palm_dim_x, palm_dim_y, parent_dim_z, j
+                )
                 parent_dim_z = new_parent_dim_z
 
                 # Modify joint axis
-                parent_axes = self.__set_joint_axis(phalanx, parent_axes)
+                parent_axes = self.__set_joint_axis(
+                    phalanx, palm_dim_x, palm_dim_y, parent_axes
+                )
 
     def __set_link_dimensions(self, phalanx):
         '''
@@ -105,7 +112,7 @@ class FingersPhenome:
             phalanx[GeneDesc.DIM_Z], Limits.DIM_Z_LOWER, Limits.DIM_Z_UPPER
         )
 
-    def __set_joint_origin(self, phalanx, parent_dim_z, index):
+    def __set_joint_origin(self, phalanx, palm_dim_x, palm_dim_y, parent_dim_z, index):
         '''
         Places links at the edge of their respective parents by setting their
         joint origin to their parents' lengths.
@@ -116,10 +123,6 @@ class FingersPhenome:
 
         if index == 0:
             # Limit the range of joint origin x and y to the area of the palm
-            dimensions = get_robot_palm_dims(ROBOT_HAND)
-            palm_dim_x = float(dimensions['x']) / 2
-            palm_dim_y = float(dimensions['y']) / 2
-
             phalanx_dim_x = normalize(
                 phalanx[GeneDesc.JOINT_ORIGIN_X], -palm_dim_x, palm_dim_x
             )
@@ -143,25 +146,28 @@ class FingersPhenome:
                 phalanx[GeneDesc.JOINT_ORIGIN_X] = palm_dim_x * x_quadrant
                 phalanx[GeneDesc.JOINT_ORIGIN_Y] = phalanx_dim_y
 
+            # Attach link at the end of palm
+            phalanx[GeneDesc.JOINT_ORIGIN_Z] = parent_dim_z + (
+                phalanx[GeneDesc.DIM_Z] / 2
+            )
+
         else:
             # Other phalanges are attached to the center of their parent phalanx
             phalanx[GeneDesc.JOINT_ORIGIN_X] = 0
             phalanx[GeneDesc.JOINT_ORIGIN_Y] = 0
 
-        # Attach link at the end of parent
-        phalanx[GeneDesc.JOINT_ORIGIN_Z] = parent_dim_z
+            # Attach link at the end of parent phalanx
+            phalanx[GeneDesc.JOINT_ORIGIN_Z] = (parent_dim_z / 2) + (
+                phalanx[GeneDesc.DIM_Z] / 2
+            )
 
         return phalanx[GeneDesc.DIM_Z]
 
-    def __set_joint_axis(self, phalanx, parent_axes=None):
+    def __set_joint_axis(self, phalanx, palm_dim_x, palm_dim_y, parent_axes=None):
         if parent_axes is None:
             # The axis of rotation for the posterior phalanges should always
             # face the center of the palm. This is to ensure the fingers can
             # close and open
-
-            dimensions = get_robot_palm_dims(ROBOT_HAND)
-            palm_dim_x = float(dimensions['x']) / 2
-            palm_dim_y = float(dimensions['y']) / 2
 
             # Check which edge of palm the phalanx is located
             if np.abs(phalanx[GeneDesc.JOINT_ORIGIN_X]) == np.abs(palm_dim_x):

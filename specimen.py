@@ -54,12 +54,12 @@ class Specimen:
 
     def __init__(
         self,
-        gene_description=GeneDesc,
-        robot_hand: str = ROBOT_HAND,
         fingers_genome: np.ndarray = None,
         brain_genome: list = None,
         generation_id: str = None,
         specimen_id: str = None,
+        gene_description=GeneDesc,
+        robot_hand: str = ROBOT_HAND,
     ):
         # Phalanx gene description Enum
         self.gene_desc = gene_description
@@ -202,7 +202,7 @@ class Specimen:
                 collisions = get_collisions(link_index)
                 phalanx.inputs = [distances, *collisions]
 
-            time.sleep(30)
+            # time.sleep(30)
 
             # Get shapes to construct input np array
             genome_shape = self.fingers_genome.shape[:2]
@@ -232,11 +232,10 @@ class Specimen:
                 f_i = phalanx.finger_index
                 p_i = phalanx.phalanx_index
 
-                phalanx.output += (outputs[f_i][p_i] * self.angle_increment)
+                phalanx.output += outputs[f_i][p_i] * self.angle_increment
 
         link_indices = [p.link_index for p in self.phalanges]
         target_angles = [p.output for p in self.phalanges]
-
 
         apply_rotation(body_id, link_indices, target_angles, p_id)
 

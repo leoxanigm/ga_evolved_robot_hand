@@ -30,11 +30,11 @@ def get_robot_palm_dims(robot_hand_file: str) -> Dims:
 
     try:
         palm_link_size = palm_link_size.attrib['size']
+        size_arr = [float(d) for d in palm_link_size.split(' ')]
     except Exception as e:
         print(e)
-        return {'x': 0, 'y': 0, 'z': 0.1}  # fall back incase of error
+        size_arr = [0.0, 0.0, 0.1]  # fall back incase of error
 
-    size_arr = palm_link_size.split(' ')
 
     return {
         'x': size_arr[0],

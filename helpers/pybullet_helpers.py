@@ -6,7 +6,8 @@ from collections import namedtuple
 
 from typing import Literal
 
-from .math_functions import distance_between_coordinates
+from helpers.math_functions import distance_between_coordinates
+from helpers.debug_helpers import draw_debug_boundary_box, draw_debug_sphere
 
 
 def is_finger_link(body_id, joint_index, p_id):
@@ -65,19 +66,16 @@ def get_distance_of_bodies(body_a_id, body_b_id, link_index, p_id) -> float:
     # Update simulation state
     # p.stepSimulation(physicsClientId=p_id)
 
-    phalanx_pos = p.getLinkState(body_a_id, link_index, physicsClientId=p_id)[0]
+    # phalanx_pos = p.getLinkState(body_a_id, link_index, physicsClientId=p_id)[0]
+    phalanx_pos = p.getAABB(body_a_id, link_index)[0]
     target_pos = p.getBasePositionAndOrientation(body_b_id, physicsClientId=p_id)[0]
 
-    result = p.rayTest(phalanx_pos, target_pos, physicsClientId=p_id)
-
-    if result[0][0] == body_b_id:  # We only want hit positions on the target
-        distance = distance_between_coordinates(phalanx_pos, result[0][3])
-        print(distance)
-        # Normalize distance
+    # result = p.rayTest(phalanx_pos, target_pos, physicsClientId=p_id)
+    try:
+        result = p.getClosestPoints(body_a_id, body_b_id, 1000, link_index)[0][6]
+        distance = distance_between_coordinates(phalanx_pos, result)
         distance = 0 if distance == 0 else 1
-    else:
-        # If the hit object is not the target, that means it can't get a clear
-        # view. In this case, we don't want to move the phalanx
+    except:
         distance = 0
 
     return distance
@@ -85,7 +83,7 @@ def get_distance_of_bodies(body_a_id, body_b_id, link_index, p_id) -> float:
 
 def check_collisions(
     body_a_id, body_b_id, body_c_id, link_index, p_id
-) -> list[tuple[Literal[0, 1], Literal[0, 1]]]:
+) -> tuple[Literal[0, 1], Literal[0, 1]]:
     '''
     Checks for collision between body_a - body_b and body_a - body_c.
     The link to be checked in body_a is specified by link_index
@@ -120,7 +118,7 @@ def apply_rotation(body_id, joint_index, target_pos, p_id=0, prev_target_pos=Non
     check_id = body_id
 
     assert isinstance(body_id, int)
-    if p.getNumJoints(body_id) < c.FINGER_START_INDEX:
+    if p.getNumJoints(body_id, physicsClientId=p_id) < c.FINGER_START_INDEX:
         raise ValueError(
             'body_a_id must be an instance of a robot hand with fingers attached.'
         )
@@ -197,7 +195,7 @@ def smooth_joint_control(
     #     joint_motor_control_function(
     #         body_id, joint_index, p.POSITION_CONTROL, target_pos, physicsClientId=p_id
     #     )
-    #     p.stepSimulation()
+    #     p.stepSimulation(physicsClientId=p_id)
     #     time.sleep(steps)
     #     steps += steps
     # if isinstance(target_pos, list):
@@ -223,6 +221,6 @@ def smooth_joint_control(
                 new_target_pos,
                 physicsClientId=p_id,
             )
-            p.stepSimulation()
+            p.stepSimulation(physicsClientId=p_id)
     else:
         new_target_pos = target_pos / steps

@@ -105,7 +105,7 @@ class GenerateURDF:
         vis_origin_tag = ET.Element(
             'origin',
             attrib={
-                'xyz': f'0 0 {DIM_Z / 2}', # 
+                'xyz': f'0 0 0', # 
                 'rpy': '0 0 0',
             },
         )
