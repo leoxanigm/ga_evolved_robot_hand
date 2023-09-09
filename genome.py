@@ -94,7 +94,8 @@ class BrainGenome:
         '''
 
         # Take number of finger and phalanges. Size of weight array equals
-        # number of inputs
+        # number of inputs. For example: for a brain genome with shape (7, 10, 9),
+        # and for 3 inputs, the convolution matrix will have a shape (7, 10, 7, 10, 3)
         size = (*shape[:2], *shape[:2], num_inputs)
         convolution_matrix = np.random.uniform(low=-0.5, high=0.5, size=size)
 

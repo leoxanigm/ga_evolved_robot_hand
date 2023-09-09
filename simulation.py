@@ -11,6 +11,7 @@ from helpers.pybullet_helpers import (
     apply_rotation,
     check_collisions,
     get_genome_link_indices,
+    check_in_target_box,
 )
 
 from population import Population
@@ -42,9 +43,14 @@ class Simulation:
         # Serves as a spot where target object can be placed and
         # as an obstacle to avoid for the fingers
         self.table = None
+        # Target contains where the objects will be dropped
+        self.target_box = None
 
         # List of target object ids
         self.target_objects = []
+
+        # Target objects dropped in box
+        self.targets_in_box = []
 
         self.__initialize_pybullet()
         self.__initialize_bodies()
@@ -92,22 +98,27 @@ class Simulation:
             )
             self.target_objects.append(body)
 
+        # Load target box
+        self.target_box = p.loadURDF('objects/assets/target_box.urdf', useFixedBase=1)
+        p.resetBasePositionAndOrientation(self.target_box, [-1, 0, 0], [1, 0, 0, 1])
+
     def __load_next_target_object(self):
         '''Removes the current target object from the target_objects array
         and moves the next one to the pick up location'''
 
         assert len(self.target_objects) > 0
 
-        # Get the position of the current target
+        in_target_box = check_in_target_box(
+            self.target_objects[0], self.target_box, self.p_id
+        )
+
         # If the target is not moved to the drop location, the arm was
         # not successful and we need to remove the object to clear the
         # place for the next target.
-        curr_pos, _ = p.getBasePositionAndOrientation(
-            self.target_objects[0], physicsClientId=self.p_id
-        )
-
-        if curr_pos[1] < 1 and curr_pos[1] > -1:
+        if not in_target_box:
             p.removeBody(self.target_objects[0], physicsClientId=self.p_id)
+        else:
+            self.targets_in_box.append(self.target_objects[0])
 
         self.target_objects.pop(0)
 
@@ -206,20 +217,15 @@ class Simulation:
                     self.__get_distances,
                     self.__get_collisions,
                     self.p_id,
+                    self.target_objects[0],
                     i,
                 )
-
-            # Calculate fitness for the fingers
-            # specimen.calc_fitness(self.__get_distances, 'fingers')
 
             # Move robot arm back to ready to pick location
             specimen.move_arm('ready_to_pick', self.robot, self.p_id)
 
             # Move robot arm to drop off location
             specimen.move_arm('drop', self.robot, self.p_id)
-
-            # Calculate fitness for the whole arm
-            # specimen.calc_fitness(self.__get_distances)
 
             # Drop object
             specimen.move_fingers(
@@ -234,9 +240,12 @@ class Simulation:
             specimen.move_arm(
                 'drop', self.robot, self.p_id
             )  # To add some delay at the drop location
-            specimen.move_arm('ready_to_pick', self.robot, self.p_id)
+            specimen.move_arm('return_to_pick', self.robot, self.p_id)
 
             self.__load_next_target_object()
+
+        # Calculate fitness
+        specimen.calc_fitness(self.targets_in_box, self.target_box, self.p_id)
 
         # Keep simulation running is connected via GUI
         while self.conn_method == 'GUI':

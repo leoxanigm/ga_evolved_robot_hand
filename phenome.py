@@ -215,7 +215,12 @@ class BrainPhenome:
     def __init__(self, brain_genome: BrainGenome = None):
         self.brain_genome = brain_genome
 
-    def trajectories(self, input: np.ndarray) -> np.ndarray:
+    def trajectories(
+        self,
+        input: np.ndarray,
+        target_object: int = 0,
+        iteration: int = 0,
+    ) -> np.ndarray:
         '''
         Performs convolution transform on a set of inputs based on convolution
         matrix genome encoding.

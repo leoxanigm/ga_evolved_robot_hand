@@ -6,14 +6,23 @@ import math
 from constants import GeneDesc, Limits
 
 
-class CrossFingers:
+class Cross:
     '''
-    Crosses two fingers of two specimen parents.
-    Works by either randomly taking a whole finger from one parent and
-    replacing a whole finger of the second parent or by randomly replacing
-    a phalanx/phalanges of one parent ba a phalanx/phalanges of the
-    second parent'''
+    Crosses two two specimen parents.
+    It takes phalanx genomes and corresponding convolution matrices from
+    two parents and returns a child genome encoding of fingers and brain.
+    It performs a Biased Uniform Crossing where fitter phalanges are
+    taken from each parent.
+    '''
 
+    @staticmethod
+    def __get_genome_mapping():
+        # To Do
+        # Check if genome mapping works for crossing
+        # map fitness to genome encoding
+        # take either from parent a or b by which ever fitness is greater
+        # use np boolean indexing
+        pass
     @staticmethod
     def cross_genomes(parent_1: np.ndarray, parent_2: np.ndarray):
         assert parent_1.shape == parent_2.shape

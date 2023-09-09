@@ -12,14 +12,14 @@ from phenome import FingersPhenome
 
 class GenerateURDF:
     '''
-    Generates URDF robot file from genome data
+    Generates URDF robot file from fingers phenome
 
     Args:
-        genome_data: fingers genome matrix
+        fingers_phenome: fingers genome matrix
     '''
 
-    def __init__(self, genome_data):
-        self.genome_data = genome_data
+    def __init__(self, fingers_phenome):
+        self.fingers_phenome = fingers_phenome
 
     def generate_robot_fingers(self, robot_hand_file, output_file):
         '''
@@ -55,8 +55,8 @@ class GenerateURDF:
             return False
 
     def __populate_links_and_joints(self, xml_root):
-        for i in range(len(self.genome_data)):  # loop through fingers
-            finger = self.genome_data[i]
+        for i in range(len(self.fingers_phenome)):  # loop through fingers
+            finger = self.fingers_phenome[i]
 
             if np.all(finger == 0):
                 # No need to continue looping are the rest of array elements will be None
@@ -65,7 +65,7 @@ class GenerateURDF:
             parent = 'palm_link'
 
             for j in range(len(finger)):  # loop through phalanges
-                phalanx = self.genome_data[i][j]
+                phalanx = self.fingers_phenome[i][j]
 
                 if np.all(phalanx == 0):
                     break
@@ -105,7 +105,7 @@ class GenerateURDF:
         vis_origin_tag = ET.Element(
             'origin',
             attrib={
-                'xyz': f'0 0 0', # 
+                'xyz': f'0 0 {DIM_Z / 2}', # 
                 'rpy': '0 0 0',
             },
         )

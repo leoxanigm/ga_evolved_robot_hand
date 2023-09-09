@@ -74,7 +74,7 @@ def get_distance_of_bodies(body_a_id, body_b_id, link_index, p_id) -> float:
     try:
         result = p.getClosestPoints(body_a_id, body_b_id, 1000, link_index)[0][6]
         distance = distance_between_coordinates(phalanx_pos, result)
-        distance = 0 if distance == 0 else 1
+        # distance = 0 if distance == 0 else 1
     except:
         distance = 0
 
@@ -190,19 +190,7 @@ def smooth_joint_control(
         joint_motor_control_function (function): joint motor control function to use
     '''
 
-    # steps = anim_time / 100
-    # while steps < anim_time:
-    #     joint_motor_control_function(
-    #         body_id, joint_index, p.POSITION_CONTROL, target_pos, physicsClientId=p_id
-    #     )
-    #     p.stepSimulation(physicsClientId=p_id)
-    #     time.sleep(steps)
-    #     steps += steps
-    # if isinstance(target_pos, list):
-    #     step_pos = [pos / 100 for pos in target_pos]
-    # else:
-    #     step_pos = target_pos / 100
-    steps = 2400
+    steps = 1200
 
     if isinstance(target_pos, list):
         pos_difference = [t_pos - p_pos for t_pos, p_pos in zip(target_pos, prev_pos)]
@@ -224,3 +212,34 @@ def smooth_joint_control(
             p.stepSimulation(physicsClientId=p_id)
     else:
         new_target_pos = target_pos / steps
+
+
+def check_in_target_box(body_id: int, target_box_id: int, p_id: int) -> bool:
+    '''Checks if a target object is in the target dropping box'''
+
+    curr_pos, _ = p.getBasePositionAndOrientation(body_id, physicsClientId=p_id)
+
+    try:
+        # Get target box bounding locations
+        box_aabb = p.getAABB(target_box_id, physicsClientId=p_id)
+    except:  # Target object no longer in the sim
+        return False
+
+    curr_pos_x = curr_pos[0]
+    curr_pos_y = curr_pos[1]
+
+    # Get box boundaries
+    t_min_x = box_aabb[0][0]
+    t_max_x = box_aabb[1][0]
+    t_min_y = box_aabb[0][1]
+    t_max_y = box_aabb[1][1]
+
+    if (
+        curr_pos_x > t_min_x
+        and curr_pos_x < t_max_x
+        and curr_pos_y > t_min_y
+        and curr_pos_y < t_max_y
+    ):
+        return True
+
+    return False

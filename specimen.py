@@ -10,6 +10,8 @@ from collections import namedtuple
 from genome import FingersGenome, BrainGenome
 from phenome import FingersPhenome, BrainPhenome
 from generate_urdf import GenerateURDF
+from fitness_fun import FitnessFunction
+
 from constants import GeneDesc, ROBOT_HAND, TRAINING_DIR
 from helpers.pybullet_helpers import apply_rotation
 
@@ -21,6 +23,40 @@ class Phalanx:
         self.link_index = link_index
         self.inputs = inputs
         self.output = output
+
+        # The distance of the phalanx from the target object for each iteration,
+        # later used to calculate fitness
+        self._total_distance = 0
+        self._target_collision = 0
+        self._obstacle_collision = 0
+
+        # Keep track of iterations. Later used to normalize the recorded values
+        self.iterations = 0
+
+        # Fitness of the finger the current phalanx is located
+        self.finger_fitness = 0
+        # Fitness of the current phalanx
+        self.phalanx_fitness = 0
+
+    def set_performance(self, distance, t_collision, o_collision):
+        '''
+        Increments the distance of the phalanx from the target object,
+        collision with target and collision for obstacle for each iteration
+        '''
+        self._total_distance += distance
+        self._target_collision += t_collision
+        self._obstacle_collision += o_collision
+
+        self.iterations += 1
+
+    def get_performance(self):
+        '''Returns normalized values for
+        (total_distance, total_target_collisions, total_obstacle_collisions)'''
+        return (
+            self._total_distance / self.iterations,
+            self._target_collision / self.iterations,
+            self._obstacle_collision / self.iterations,
+        )
 
 
 class Specimen:
@@ -69,7 +105,10 @@ class Specimen:
         self._fingers_genome = None
         self._brain_genome = None
 
-        self.phalanges: list[Phalanx] = []
+        self._phalanges: list[Phalanx] = []
+
+        # Increment angle for each iteration of fingers' movement
+        self.angle_increment = np.pi / 16
 
         # Assign a unique id
         # Use first 8 characters to avoid long file names
@@ -112,9 +151,6 @@ class Specimen:
         if fingers_genome is not None and brain_genome is not None:
             self.fingers_phenome = FingersPhenome(fingers_genome)
             self.fingers = self.fingers_phenome.phenome
-
-            self.brain = BrainPhenome(brain_genome)
-
         else:
             # Initialize random fingers genome
             fingers_genome = FingersGenome.genome(self.gene_desc)
@@ -125,6 +161,14 @@ class Specimen:
             # Initialize random brain genome
             brain_genome = BrainGenome.genome(fingers_genome)
 
+        self._fingers_genome = self.fingers_phenome.genome
+
+        self.brain = BrainPhenome(brain_genome)
+        self._brain_genome = self.brain.genome
+
+        self.write_training_urdf()
+
+    def write_training_urdf(self):
         # Write fingers URDF definition file
         training_folder_path = TRAINING_DIR
         output_file = f'{self.id}.urdf'
@@ -140,11 +184,6 @@ class Specimen:
         else:
             raise Exception('Can not initialize robot fingers')
 
-        self._fingers_genome = self.fingers_phenome.genome
-
-        self.brain = BrainPhenome(brain_genome)
-        self._brain_genome = self.brain.genome
-
     def load_state(self, genome_link_indices: list[tuple]):
         '''Loads genome indices (fingers and phalanges) and link indices to
         the phalanges state'''
@@ -154,7 +193,7 @@ class Specimen:
 
         # Populate state for phalanges
         for (finger_index, phalanx_index), link_index in genome_link_indices:
-            self.phalanges.append(Phalanx(finger_index, phalanx_index, link_index))
+            self._phalanges.append(Phalanx(finger_index, phalanx_index, link_index))
 
     def move_fingers(
         self,
@@ -163,6 +202,7 @@ class Specimen:
         get_distances: FunctionType,
         get_collisions: FunctionType,
         p_id: int,
+        target_object: int = 0,
         iteration: int = 0,
     ):
         '''
@@ -184,35 +224,46 @@ class Specimen:
 
         p.stepSimulation(physicsClientId=p_id)
         if action == 'ready_to_pick' or action == 'drop':
-            for phalanx in self.phalanges:
+            for phalanx in self._phalanges:
                 if phalanx.phalanx_index == 0:
                     # Spread out the fingers
-                    phalanx.output = np.pi / 4
+                    phalanx.output = -np.pi / 4
                 else:
                     phalanx.output = 0
         elif action == 'pick' and iteration == 0:
             # For the first iteration of the grabbing steps, move the
             # phalanges in a straight position
-            for phalanx in self.phalanges:
+            for phalanx in self._phalanges:
                 phalanx.output = 0
         else:
-            for phalanx in self.phalanges:
+            for phalanx in self._phalanges:
                 link_index = phalanx.link_index
-                distances = get_distances(link_index)
+                distance = get_distances(link_index)
                 collisions = get_collisions(link_index)
-                phalanx.inputs = [distances, *collisions]
+
+                # Get collisions
+                target_collision = collisions[0]
+                obstacle_collision = collisions[1]
+
+                # Record phalanx performance
+                phalanx.set_performance(distance, target_collision, obstacle_collision)
+
+                # Set inputs for brain
+                # We just care if there is a distance not the quantity
+                distance = 0 if distance == 0 else 1
+                phalanx.inputs = [distance, target_collision, obstacle_collision]
 
             # time.sleep(30)
 
             # Get shapes to construct input np array
             genome_shape = self.fingers_genome.shape[:2]
-            input_shape = len(self.phalanges[0].inputs)
+            input_shape = len(self._phalanges[0].inputs)
 
             # Initialize the input array with zeros
             inputs = np.zeros((*genome_shape, input_shape))
 
             # Populate the inputs
-            for phalanx in self.phalanges:
+            for phalanx in self._phalanges:
                 f_i = phalanx.finger_index
                 p_i = phalanx.phalanx_index
 
@@ -222,20 +273,25 @@ class Specimen:
             # print(f'inputs {inputs}')
 
             # Get trajectories
-            outputs = self.brain.trajectories(inputs)
+            outputs = self.brain.trajectories(
+                inputs, target_object=target_object, iteration=iteration
+            )
 
             # print(f'outputs {outputs}')
             # print('===============')
 
             # Populate output
-            for phalanx in self.phalanges:
+            for phalanx in self._phalanges:
                 f_i = phalanx.finger_index
                 p_i = phalanx.phalanx_index
 
                 phalanx.output += outputs[f_i][p_i] * self.angle_increment
 
-        link_indices = [p.link_index for p in self.phalanges]
-        target_angles = [p.output for p in self.phalanges]
+        link_indices = [p.link_index for p in self._phalanges]
+        target_angles = [p.output for p in self._phalanges]
+
+        # print(f'target_angles {target_angles}')
+        # print('===============')
 
         apply_rotation(body_id, link_indices, target_angles, p_id)
 
@@ -252,7 +308,7 @@ class Specimen:
                 pick - picks up the object
                 move_to_drop - rotates to object drop position
                 drop - goes to drop position
-                reset - rotates back to original position
+                return_to_pick - returns to object pick up position
         Returns:
             rotation angle (tuple[float]): [base_rotation, elbow_rotation]
         '''
@@ -261,6 +317,7 @@ class Specimen:
             'pick': [0, np.pi / 2],
             'move_to_drop': [np.pi, np.pi / 4],
             'drop': [np.pi, np.pi / 2],
+            'return_to_pick': [0, np.pi / 4],
         }
 
         assert action in action_dict
@@ -268,64 +325,38 @@ class Specimen:
         if len(self.prev_arm_angles) == 0:
             self.prev_arm_angles = [0, 0]
 
-        apply_rotation(body_id, [0, 1], action_dict[action], p_id, self.prev_arm_angles)
+        if action == 'return_to_pick':
+            # Don't animate the return motion in direct connection to save time
+            conn_info = p.getConnectionInfo(physicsClientId=p_id)
+            if conn_info['connectionMethod'] == p.DIRECT:  #
+                apply_rotation(body_id, [0, 1], action_dict[action], p_id)
+        else:
+            apply_rotation(
+                body_id, [0, 1], action_dict[action], p_id, self.prev_arm_angles
+            )
 
         # Keep track of applied angles
         # This is later used for smooth movement animation
         self.prev_arm_angles = action_dict[action]
 
-    def calc_fitness(self, get_distances: FunctionType, link_type: str = 'all'):
-        '''Calculates fitness of the specimen for each target object
+    def calc_fitness(self, moved_object_ids: list[int], target_box_id: int, p_id: int):
+        '''Calculates fitness of the specimen
         Args:
-            get_distances (function): callback to get distances from simulation
-            link_type (str): wether to get distances of just fingers or for
-                both fingers and the palm. This is to calculate the fitness
-                of the specimen when fingers are picking up the object in
-                addition to check if the specimen actually moved the object
+            moved_object_ids: list of successfully moved object ids
+            target_box_id: target dop box id
+            p_id: connected physics client id
         '''
-        if self.distance_array is None:
-            if link_type == 'fingers':
-                self.distance_array = [dis for dis, _ in get_distances('fingers')]
-                self.distance_array.append(0)
-            else:
-                self.distance_array = [0] * len(get_distances('fingers'))
-                self.distance_array.append(get_distances('palm')[0][0])
 
-        else:
-            # If distance_array is not empty, that means we have a record of
-            # fitnesses for the first target object. In this case we add the
-            # distances for the next target object to the original distances.
-
-            if link_type == 'fingers':
-                new_distance_array = [dis for dis, _ in get_distances('fingers')]
-                new_distance_array.append(0)
-            else:
-                new_distance_array = [0] * (len(self.distance_array) - 1)
-                new_distance_array.append(get_distances('palm')[0][0])
-
-            # Add the new fitness to the previous records
-            # Source: https://www.javatpoint.com/how-to-add-two-lists-in-python
-            self.distance_array = list(
-                map(add, self.distance_array, new_distance_array)
+        grabbing_performance = FitnessFunction.get_grabbing_performance(self._phalanges)
+        picking_performance = 0
+        for id in moved_object_ids:
+            picking_performance += FitnessFunction.get_picking_performance(
+                id, target_box_id, p_id
             )
 
-        # If the distance of the target object from the palm is small,
-        # the arm has picked up the object, making the specimen more fit.
-        # Hence we square the distance of the palm from the object to give
-        # it more importance.
-        self.distance_array[-1] = self.distance_array[-1] ** 2
-
-        # The final goal is to get the distances as close as possible
-        # to zero. That is, we don't want neither positive or negative
-        # distances. So, we use mean-square of the fitnesses to calculate
-        # the total fitness value
-        self.distance_total = np.mean(np.square(self.distance_array))
-
-        # Use the minimum of the accumulated distance or 50 as exorbitantly
-        # large distance would not add that much difference to the fitness
-        self.distance_total = min(self.distance_total, 50)
-
-        self._fitness = 50 - self.distance_total
+        self._fitness = FitnessFunction.get_total_fitness(
+            grabbing_performance, picking_performance
+        )
 
     def save_specimen(self, generation_id: str):
         '''
@@ -357,22 +388,12 @@ class Specimen:
         )
 
     @property
-    def num_of_phalanges(self):
-        finger_count = 0
-        for finger in self.fingers:  # loop through fingers
-            if np.all(finger == 0):
-                # No need to continue looping are the rest of array elements will be None
-                break
-
-            for phalanx in finger:  # loop through phalanges
-                if np.all(phalanx == 0):
-                    break
-
-                finger_count += 0
-
-    @property
     def fitness(self):
         return self._fitness
+
+    @property
+    def phalanges(self):
+        return self._phalanges
 
     @property
     def fingers_genome(self):
