@@ -14,52 +14,22 @@ class FingersGenome:
             columns: maximum number of phalanges
         '''
 
-        genome_matrix = FingersGenome.__set_default_matrix(
-            len(gene_description), rows, columns
+        max_fingers, max_phalanges = rows, columns
+        
+        # A random matrix with num of max fingers and phalanges
+        gene_len = len(gene_description)
+        genome_matrix = np.random.uniform(
+            low=0.01, high=1, size=(max_fingers, max_phalanges, gene_len)
         )
-        genome_matrix = FingersGenome.__generate_rand_fingers(genome_matrix)
 
-        return genome_matrix
+        # Random number of fingers between 2 and max_fingers
+        fingers = np.random.randint(2, max_fingers)
+        genome_matrix[fingers:] = 0
 
-    @staticmethod
-    def __set_default_matrix(gene_len: int, max_fingers: int, max_phalanges: int):
-        '''
-        Returns a default matrix of zeros.
-        Rows are list of fingers
-        Columns describe each finger with list of phalanges
-
-        Args:
-            max_fingers: maximum number of fingers
-            max_phalanges: maximum number of phalanges in each finger
-            gene_len: length of genome description for each phalanx
-        '''
-
-        genome_matrix = np.zeros(
-            (max_fingers, max_phalanges, gene_len), dtype=np.float64
-        )
-        return genome_matrix
-
-    @staticmethod
-    def __generate_rand_fingers(genome_matrix: np.ndarray):
-        '''
-        Generates random fingers by setting random array of floats
-
-        Args:
-            genome_matrix: a genome matrix of zeros with
-                shape (fingers, phalanges, gene desc length)
-        '''
-
-        # random number of fingers
-        no_of_fingers = np.random.randint(2, len(genome_matrix))
-
-        for i in range(no_of_fingers):
-            # random number of phalanx
-            no_of_phalanx = np.random.randint(2, len(genome_matrix[i]))
-
-            for j in range(no_of_phalanx):
-                genome_matrix[i][j] = np.random.uniform(
-                    0.01, 1, len(genome_matrix[i][j])
-                )
+        # Random number of phalanges for each finger
+        for f in range(max_fingers):
+            p = np.random.randint(2, max_phalanges)
+            genome_matrix[f, p:] = 0
 
         return genome_matrix
 
@@ -83,20 +53,12 @@ class BrainGenome:
             num_inputs: number of inputs
         '''
         assert isinstance(genome_matrix, np.ndarray)
-        shape = genome_matrix.shape
-        return BrainGenome.__generate_convolution_matrix(shape, num_inputs)
 
-    @staticmethod
-    def __generate_convolution_matrix(shape: tuple, num_inputs: int) -> np.ndarray:
-        '''
-        Returns a convolution matrix with random weights with shape
-        the same as input.
-        '''
+        shape = genome_matrix.shape
 
         # Take number of finger and phalanges. Size of weight array equals
         # number of inputs. For example: for a brain genome with shape (7, 10, 9),
         # and for 3 inputs, the convolution matrix will have a shape (7, 10, 7, 10, 3)
         size = (*shape[:2], *shape[:2], num_inputs)
-        convolution_matrix = np.random.uniform(low=-0.5, high=0.5, size=size)
 
-        return convolution_matrix
+        return np.random.uniform(low=-0.5, high=0.5, size=size)

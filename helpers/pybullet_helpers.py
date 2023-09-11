@@ -64,11 +64,16 @@ def get_distance_of_bodies(body_a_id, body_b_id, link_index, p_id) -> float:
     )
 
     # Update simulation state
-    # p.stepSimulation(physicsClientId=p_id)
+    p.stepSimulation(physicsClientId=p_id)
 
-    # phalanx_pos = p.getLinkState(body_a_id, link_index, physicsClientId=p_id)[0]
-    phalanx_pos = p.getAABB(body_a_id, link_index)[0]
-    target_pos = p.getBasePositionAndOrientation(body_b_id, physicsClientId=p_id)[0]
+    try:
+        # phalanx_pos = p.getLinkState(body_a_id, link_index, physicsClientId=p_id)[0]
+        phalanx_pos = p.getAABB(body_a_id, link_index)[0]
+        target_pos = p.getBasePositionAndOrientation(body_b_id, physicsClientId=p_id)[0]
+    except Exception as e:
+        raise RuntimeError(
+            f'{e} raised. Are you sure you are cleaning up connected servers after simulations?'
+        )
 
     # result = p.rayTest(phalanx_pos, target_pos, physicsClientId=p_id)
     try:
@@ -214,10 +219,15 @@ def smooth_joint_control(
         new_target_pos = target_pos / steps
 
 
-def check_in_target_box(body_id: int, target_box_id: int, p_id: int) -> bool:
-    '''Checks if a target object is in the target dropping box'''
+def check_in_target_box(body_ids: list[int], target_box_id: int, p_id: int) -> bool:
+    '''Checks if a list of target objects is in the target dropping box'''
 
-    curr_pos, _ = p.getBasePositionAndOrientation(body_id, physicsClientId=p_id)
+    assert isinstance(body_ids, list)
+
+    def get_pos(id):
+        return p.getBasePositionAndOrientation(id, physicsClientId=p_id)[0]
+
+    positions = [get_pos(body_id) for body_id in body_ids]
 
     try:
         # Get target box bounding locations
@@ -225,21 +235,32 @@ def check_in_target_box(body_id: int, target_box_id: int, p_id: int) -> bool:
     except:  # Target object no longer in the sim
         return False
 
-    curr_pos_x = curr_pos[0]
-    curr_pos_y = curr_pos[1]
-
-    # Get box boundaries
+    # # Get box boundaries
     t_min_x = box_aabb[0][0]
     t_max_x = box_aabb[1][0]
     t_min_y = box_aabb[0][1]
     t_max_y = box_aabb[1][1]
 
-    if (
-        curr_pos_x > t_min_x
-        and curr_pos_x < t_max_x
-        and curr_pos_y > t_min_y
-        and curr_pos_y < t_max_y
-    ):
-        return True
+    return (
+        (x > t_min_x and x < t_max_x and y > t_min_y and y < t_max_y)
+        for x, y, _ in positions
+    )
 
-    return False
+    # curr_pos_x = curr_pos[0]
+    # curr_pos_y = curr_pos[1]
+
+    # # Get box boundaries
+    # t_min_x = box_aabb[0][0]
+    # t_max_x = box_aabb[1][0]
+    # t_min_y = box_aabb[0][1]
+    # t_max_y = box_aabb[1][1]
+
+    # if (
+    #     curr_pos_x > t_min_x
+    #     and curr_pos_x < t_max_x
+    #     and curr_pos_y > t_min_y
+    #     and curr_pos_y < t_max_y
+    # ):
+    #     return True
+
+    # return False

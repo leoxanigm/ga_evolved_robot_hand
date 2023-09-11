@@ -3,6 +3,8 @@ from copy import deepcopy
 import random
 import math
 
+from specimen import Phalanx
+
 from constants import GeneDesc, Limits
 
 
@@ -16,126 +18,135 @@ class Cross:
     '''
 
     @staticmethod
-    def __get_genome_mapping():
-        # To Do
-        # Check if genome mapping works for crossing
-        # map fitness to genome encoding
-        # take either from parent a or b by which ever fitness is greater
-        # use np boolean indexing
-        pass
-    @staticmethod
-    def cross_genomes(parent_1: np.ndarray, parent_2: np.ndarray):
-        assert parent_1.shape == parent_2.shape
+    def __get_genome_mask(
+        fitness_map_1: np.ndarray, fitness_map_2: np.ndarray
+    ) -> np.ndarray[np.bool_]:
+        '''Returns a boolean map array by comparing two fitness maps.
+        Array value will be true if fitness phalanx fitness in fitness_map_1
+        is greater than a corresponding fitness index in fitness_map_2'''
 
-        child = deepcopy(parent_1)
+        assert isinstance(fitness_map_1, np.ndarray) and isinstance(
+            fitness_map_2, np.ndarray
+        )
+        assert fitness_map_1.shape == fitness_map_2.shape
 
-        for i in range(len(child)):  # loop through fingers
-            if random.random() < 0.5:  # Replace the whole finger
-                child[i] = parent_2[i]
-            else:
-                for j in range(len(child[i])):
-                    if random.random() < 0.5:  # Replace a phalanx
-                        child[i][j] = parent_2[i][j]
-
-        child = CrossFingers.__move_non_zero_to_top(child)
-
-        return child
+        return fitness_map_1 > fitness_map_2
 
     @staticmethod
-    def __move_non_zero_to_top(child):
-        '''Move zero values to the end to avoid unwanted finger structure
-        For example: It restructures the array [1, 1, 0, 1] to [1, 1, 1, 0]'''
+    def __shorten_child(
+        parent_1: np.ndarray, parent_2: np.ndarray, child_genome: np.ndarray
+    ) -> np.ndarray:
+        '''This makes sure number of child phalanges is between the number
+        of phalanges of its parent. This is to avoid longer and longer fingers
+        with every crossing'''
 
-        child_modified = deepcopy(child)
-
-        # Rearrange fingers by sorting based on zero values
-        # This works by checking if all the values in the finger array are zero,
-        # and if there are, moves them to the bottom
-        child_modified = np.array(sorted(child, key=lambda x: np.all(x == 0)))
-
-        # Do the same for the phalanges in each finger
-        for i in range(len(child_modified)):
-            child_modified[i] = np.array(
-                sorted(child_modified[i], key=lambda x: np.all(x == 0))
+        try:
+            # Get random target phalanx count between the two parents
+            target_num = np.random.randint(
+                *sorted(
+                    (np.sum(parent_1[:, :, 0] != 0), np.sum(parent_2[:, :, 0] != 0))
+                )
             )
+        except ValueError:
+            # Same number of parents
+            return child_genome
 
-        return child_modified
+        # Start from the end phalanges and remove them to get to
+        # the target count
+        # For now this will diverge to fingers with equal length
+        # ToDo: introduce some randomness
+        p_i = -1  # phalanx index
+        while np.sum(child_genome[:, :, 0] != 0) > target_num:
+            if np.all(child_genome[:, p_i] == 0):
+                p_i -= 1
+            child_genome[:, p_i] = 0
 
-
-class MutateFingers:
-    '''Randomly adds a small value (positive or negative) to the genetic encoding
-    of fingers to give them new physical characters'''
-
-    @staticmethod
-    def mutate(child):
-        mutated_child = deepcopy(child)
-
-        for i in range(len(child)):  # Fingers
-            for j in range(len(child[i])):  # Phalanges
-                if random.random() < 0.3:
-                    # Calculate a small value from each of x, y, z dimensions'abs
-                    # small limits
-                    m_v_x = Limits.DIM_X_LOWER / 10
-                    m_v_y = Limits.DIM_Y_LOWER / 10
-                    m_v_z = Limits.DIM_Z_LOWER / 10
-
-                    # Add/subtract a random amount based on the above values
-                    child[i][j][GeneDesc.DIM_X] += np.random.uniform(-m_v_x, m_v_x)
-                    child[i][j][GeneDesc.DIM_Y] += np.random.uniform(-m_v_y, m_v_y)
-                    child[i][j][GeneDesc.DIM_Z] += np.random.uniform(-m_v_z, m_v_z)
-
-        return mutated_child
-
-
-class MutateBrain:
-    '''Randomly adds a small value (positive or negative) to the genetic encoding
-    of weights and biases to give them new values'''
+        return child_genome
 
     @staticmethod
-    def mutate(child):
-        assert isinstance(child, list)
-        assert isinstance(child[0], np.ndarray)
+    def cross_genomes(
+        f_g_parent_1: np.ndarray,
+        b_g_parent_1: np.ndarray,
+        fit_parent_1: np.ndarray,
+        f_g_parent_2: np.ndarray,
+        b_g_parent_2: np.ndarray,
+        fit_parent_2: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        '''
+        Crosses fingers and brain genome of two parents
 
-        mutated_child = deepcopy(child)
+        Args:
+            f_g_parent_1: parent 1 finger genome
+            b_g_parent_1: parent 1 brain genome
+            fit_parent_1: parent 1 phalanx fitness map
+            f_g_parent_2: parent 2 finger genome
+            b_g_parent_2: parent 2 brain genome
+            fit_parent_2: parent 2 phalanx fitness map
+        '''
 
-        # Loop through each weight and bias np array and randomly chose a value
-        # from each of the parents
-        for i in range(len(mutated_child)):
-            # We will use the same logic used to generate random weight and
-            # bias values to generate a random value to augment the values
-            features = len(mutated_child[i])
-            m_v = np.sqrt(1 / features)
+        assert all(isinstance(arr, np.ndarray) for arr in locals().values())
 
-            for j in range(len(mutated_child[i])):
-                if isinstance(mutated_child[i][j], np.ndarray):
-                    for k in range(len(mutated_child[i][j])):
-                        if random.random() < 0.5:
-                            mutated_child[i][j][k] += np.random.uniform(-m_v, m_v)
-                else:
-                    if random.random() < 0.5:
-                        mutated_child[i][j] += np.random.uniform(-m_v, m_v)
+        # Initialize children genome with zeros
+        f_g_child = np.zeros(f_g_parent_1.shape)  # fingers genome
+        b_g_child = np.zeros(b_g_parent_1.shape)  # brain genome
 
-        return mutated_child
+        fitness_mask = Cross.__get_genome_mask(fit_parent_1, fit_parent_2)
+
+        # Cross fingers genome
+        # First take fittest phalanges from parent 1
+        f_g_child[fitness_mask] = f_g_parent_1[fitness_mask]
+        b_g_child[fitness_mask] = b_g_parent_1[fitness_mask]
+        # Next take fittest phalanges from parent 2
+        f_g_child[np.invert(fitness_mask)] = f_g_parent_2[np.invert(fitness_mask)]
+        b_g_child[np.invert(fitness_mask)] = b_g_parent_2[np.invert(fitness_mask)]
+
+        f_g_child = Cross.__shorten_child(f_g_parent_1, f_g_parent_2, f_g_child)
+
+        return f_g_child, b_g_child
 
 
-class CrossBrain:
-    '''Crosses weights and biases of two parents to give a child with a
-    new set of weights and biases'''
+class Mutate:
+    '''Randomly adds a small value (positive or negative) to the genetic encodings'''
 
     @staticmethod
-    def cross_genomes(parent_1: list[np.ndarray], parent_2: list[np.ndarray]):
-        # Check there are equal number of weights and biases for each parent
-        for i in range(len(parent_1)):
-            assert parent_1[i].shape == parent_2[i].shape
+    def mutate(
+        finger_genome: np.ndarray,
+        brain_genome: np.ndarray,
+        f_amount: float,
+        b_amount: float,
+        f_rate: float = np.random.uniform(),
+        b_rate: float = np.random.uniform(),
+    ):
+        '''
+        Mutates supplied fingers and brain genomes by specified amount and given rate
+        
+        Args:
+            finger_genome: fingers genome encoding
+            brain_genome: brain genome encoding
+            f_amount: amount to mutate fingers genome by
+            b_amount: amount to mutate brain genome by
+            f_rate: rate to mutate fingers genome by
+            b_rate: rate to mutate brain genome by
+        '''
 
-        child = deepcopy(parent_1)
+        assert isinstance(finger_genome, np.ndarray) and isinstance(
+            brain_genome, np.ndarray
+        )
 
-        # Loop through each weight and bias np array and randomly chose a value
-        # from each of the parents
-        for i in range(len(child)):
-            for j in range(len(child[i])):
-                if random.random() < 0.5:
-                    # Both parents have equal probability of passing a genome information
-                    child[i][j] = parent_2[i][j]
+        # Mutate fingers genome
+        # Source: https://numpy.org/doc/stable/reference/arrays.nditer.html#modifying-array-values
+        with np.nditer(finger_genome, op_flags=['readwrite']) as it:
+            for encoding in it:
+                if np.random.uniform() < f_rate and encoding != 0:
+                    # For finger genome, the values shouldn't be out of the bounds 0.01 and 1
+                    if encoding + f_amount < 0.01 or encoding + f_amount > 1:
+                        continue
+                    encoding += f_amount
 
-        return child
+        # Mutate brain genome
+        with np.nditer(brain_genome, op_flags=['readwrite']) as it:
+            for encoding in it:
+                if np.random.uniform() < b_rate and encoding != 0:
+                    encoding += b_amount
+
+        return finger_genome, brain_genome

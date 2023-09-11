@@ -5,129 +5,107 @@ import numpy as np
 
 from constants import GeneDesc
 from genome import FingersGenome, BrainGenome
-from cross_mutate import CrossFingers, CrossBrain
+from specimen import Specimen
+from simulation import Simulation
+from fitness_fun import FitnessFunction
+from cross_mutate import Cross
 
 
-class TestCrossFingers(unittest.TestCase):
-    @given(fingers=st.integers(3, 10), phalanges=st.integers(3, 20))
-    def test_random_genome_matrix(self, fingers, phalanges):
-        '''Test the child of two genomes of a given shape has the same
-        shape as its parents'''
+class TestCross(unittest.TestCase):
+    specimen_1 = None
+    specimen_2 = None
+    child = None
 
-        genome_1 = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
-        genome_2 = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
+    @classmethod
+    def setUpClass(cls):
+        super(TestCross, cls).setUpClass()
 
-        child = CrossFingers.cross_genomes(genome_1, genome_2)
+        cls.specimen_1 = Specimen()
+        cls.specimen_2 = Specimen()
 
-        assert isinstance(child, np.ndarray)
-        assert child.shape == (fingers, phalanges, len(GeneDesc))
-        assert np.all((child >= 0) & (child < 1))
+        with Simulation() as simulation:
+            simulation.run_specimen(cls.specimen_1)
+            cls.fit_parent_1 = FitnessFunction.get_fitness_map(
+                cls.specimen_1.phalanges, cls.specimen_1.fingers.shape
+            )
+        with Simulation() as simulation:
+            simulation.run_specimen(cls.specimen_2)
+            cls.fit_parent_2 = FitnessFunction.get_fitness_map(
+                cls.specimen_2.phalanges, cls.specimen_2.fingers.shape
+            )
 
-    @given(fingers=st.integers(3, 100), phalanges=st.integers(3, 100))
-    # @settings(max_examples=10000)
-    def test_unwanted_finger_structure(self, fingers, phalanges):
+        cls.child = Cross.cross_genomes(
+            cls.specimen_1.fingers,
+            cls.specimen_1.brain.genome,
+            cls.fit_parent_1,
+            cls.specimen_2.fingers,
+            cls.specimen_2.brain.genome,
+            cls.fit_parent_2,
+        )
+
+    def test_child_shapes(self):
+        assert (
+            self.child[0].shape
+            == self.specimen_1.fingers.shape
+            == self.specimen_2.fingers.shape
+        )
+        assert (
+            self.child[1].shape
+            == self.specimen_1.brain.genome.shape
+            == self.specimen_2.brain.genome.shape
+        )
+
+    def test_child_different_from_parents(self):
+        assert all(
+            (
+                np.any(self.child[0] != self.specimen_1.fingers),
+                np.any(self.child[0] != self.specimen_2.fingers),
+            )
+        )
+        assert all(
+            (
+                np.any(self.child[1] != self.specimen_1.brain.genome),
+                np.any(self.child[1] != self.specimen_2.brain.genome),
+            )
+        )
+
+    def test_no_unwanted_finger_structure(self):
         '''
-        Test the child contains no fingers after empty spots
+        Test the child contains no fingers or phalanges after empty spots
         For example: [1, 1, 0, 1] this is unwanted finger structure
-        caused by finger crossing which will later break our code.
-        Hence the test makes sure no arrays like the example are
+        which could be caused by finger crossing which will later break
+        our code. Hence the test makes sure no arrays like the example are
         created because of crossing between two parents with different
         amount of fingers.
         '''
 
-        genome_1 = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
-        genome_2 = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
+        non_zero_index = np.nonzero(self.child[0] != 0)
+        curr_i = -1
+        index_sum = curr_i
+        for f, p, _ in zip(*non_zero_index):
+            if f != curr_i:
+                assert f == (curr_i + 1)
+                curr_i = f
+                index_sum = curr_i
+            else:
+                assert (f + p) <= (index_sum + 1)
+                if (f + p) == (index_sum + 1):
+                    index_sum += f + p
 
-        # Purposefully make genome_2 have only two fingers so that the crossing
-        # will likely yield the unwanted finger structure
-        genome_2[2:] = np.zeros((phalanges, len(GeneDesc)))
+    # def test_child_len_between_parents(self):
+    #     '''Test number of phalanges in child are not fewer or greater
+    #     than number of phalanges in the parents.'''
 
-        child = CrossFingers.cross_genomes(genome_1, genome_2)
+    #     num_pha_par_1 = np.sum(self.specimen_1.fingers != 0)
+    #     num_pha_par_2 = np.sum(self.specimen_2.fingers != 0)
+    #     num_pha_par_child = np.sum(self.child[0] != 0)
 
-        found_empty = False
-        for finger in child:
-            if np.all(finger == 0):
-                found_empty = True
-            try:
-                assert not (found_empty and np.any(finger != 0))
-            except:
-                print(child)
-
-    @given(fingers=st.integers(3, 100), phalanges=st.integers(3, 100))
-    # @settings(max_examples=10000)
-    def test_unwanted_phalanx_structure(self, fingers, phalanges):
-        '''
-        Test each finger of the child contains no phalanges after
-        empty spots For example: [[1], [1], [0], [1]] this is unwanted
-        phalanx structure in an arbitrary finger caused by phalanx crossing
-        which will later break our code. Hence the test makes sure no phalanx
-        like the example are created because of crossing between two
-        parents with different amount of phalanges.
-        '''
-
-        genome_1 = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
-        genome_2 = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
-
-        child = CrossFingers.cross_genomes(genome_1, genome_2)
-
-        for finger in child:
-            found_empty = False
-            for phalanx in finger:
-                if np.all(phalanx == 0):
-                    found_empty = True
-                assert not (found_empty and np.any(phalanx != 0))
-
-class TestCrossBrain:
-    genome_1 = None
-    genome_2 = None
-    child = None
-
-    def _setup_test_child_genome_array(self, inputs, hidden, outputs):
-        self.inputs = inputs
-        self.hidden = hidden
-        self.outputs = outputs
-        self.genome_1 = BrainGenome.genome(layers=[(inputs, hidden),(hidden, outputs)])
-        self.genome_2 = BrainGenome.genome(layers=[(inputs, hidden),(hidden, outputs)])
-
-        self.child = CrossBrain.cross_genomes(self.genome_1, self.genome_2)
-
-
-    @given(inputs=st.integers(5, 10), hidden=st.integers(11, 50), outputs=st.integers(1, 4))
-    def test_random_genome_array(self, inputs, hidden, outputs):
-        '''Test the child of two genomes of a given shape has the same
-        shape as its parents'''
-
-        self._setup_test_child_genome_array(inputs, hidden, outputs)
-
-        assert isinstance(self.child, list)
-        assert isinstance(self.child[0], np.ndarray)
-        assert self.child[0].shape == (inputs, hidden)
-        assert self.child[1].shape == (hidden, )
-        assert self.child[2].shape == (hidden, outputs)
-        assert self.child[3].shape == (outputs, )
-
-    @given(inputs=st.integers(5, 10), hidden=st.integers(11, 50), outputs=st.integers(1, 4))
-    def test_cross_genome_array(self, inputs, hidden, outputs):
-        '''Test the child of two genomes of a given shape is different from 
-        its parents'''
-
-        self._setup_test_child_genome_array(inputs, hidden, outputs)
-
-        different_from_parent_1 = False
-        for i in range(len(self.child)):
-            for j in range(len(self.child[i])):
-                if np.any(self.child[i][j] != self.genome_1[i][j]):
-                    different_from_parent_1 = True
-
-        different_from_parent_2 = False
-        for i in range(len(self.child)):
-            for j in range(len(self.child[i])):
-                if np.any(self.child[i][j] != self.genome_1[i][j]):
-                    different_from_parent_2 = True
-
-        assert different_from_parent_1 and different_from_parent_2
-
-        
+    #     assert all(
+    #         (
+    #             num_pha_par_child >= min(num_pha_par_1, num_pha_par_2),
+    #             num_pha_par_child <= max(num_pha_par_1, num_pha_par_2),
+    #         )
+    #     )
 
 
 if __name__ == '__main__':

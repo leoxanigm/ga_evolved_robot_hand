@@ -2,7 +2,6 @@ import math
 
 from specimen import Specimen
 from constants import GeneDesc, ROBOT_HAND
-from cross_mutate import CrossFingers, CrossBrain, MutateFingers, MutateBrain
 
 
 class Population:

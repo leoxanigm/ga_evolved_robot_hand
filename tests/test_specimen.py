@@ -94,24 +94,24 @@ class TestSpecimen(unittest.TestCase):
         assert np.all(specimen.fingers_genome == fingers_genome)
         assert np.all(specimen.brain_genome == brain_genome)
 
-    def test_fit_specimen(self):
-        '''Test a manually created fit specimen satisfies the
-        fitness requirements'''
+    # def test_fit_specimen(self):
+    #     '''Test a manually created fit specimen satisfies the
+    #     fitness requirements'''
 
-        start = time.time()
+    #     start = time.time()
 
-        fingers_genome = FingersGenome.genome(GeneDesc)
-        brain_genome = BrainGenome.genome(fingers_genome)
-        finger_phenome = FingerPhenomeTest(fingers_genome)
-        brain_phenome = BrainPhenomeTest(brain_genome)
-        specimen = Specimen()
-        specimen.fingers = finger_phenome.genome
-        specimen.brain = brain_phenome
-        specimen.write_training_urdf() # New urdf for our phenome
-        simulation = Simulation(conn_method='GUI')
-        # simulation = Simulation()
-        simulation.run_specimen(specimen)
-        print(specimen.fitness)
+    #     fingers_genome = FingersGenome.genome(GeneDesc)
+    #     brain_genome = BrainGenome.genome(fingers_genome)
+    #     finger_phenome = FingerPhenomeTest(fingers_genome)
+    #     brain_phenome = BrainPhenomeTest(brain_genome)
+    #     specimen = Specimen()
+    #     specimen.fingers = finger_phenome.genome
+    #     specimen.brain = brain_phenome
+    #     specimen.write_training_urdf() # New urdf for our phenome
+    #     simulation = Simulation(conn_method='GUI')
+    #     # simulation = Simulation()
+    #     simulation.run_specimen(specimen)
+    #     print(specimen.fitness)
 
 if __name__ == '__main__':
     unittest.main()

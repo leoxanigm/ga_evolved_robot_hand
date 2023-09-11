@@ -8,9 +8,12 @@ import pybullet as p
 
 from genome import FingersGenome, BrainGenome
 from phenome import FingersPhenome, BrainPhenome
+from specimen import Specimen
+from simulation import Simulation
+from tests.test_specimen import FingerPhenomeTest, BrainPhenomeTest
 from constants import GeneDesc
 
-from helpers.pybullet_helpers import get_distance_of_bodies, check_collisions
+from helpers.pybullet_helpers import get_distance_of_bodies, check_collisions, check_in_target_box
 
 target_urdf = ['cube.urdf', 'sphere.urdf', 'cylinder.urdf']
 target_obj_dir = os.path.join(os.path.dirname(__file__), os.pardir, 'objects')
@@ -18,6 +21,8 @@ target_obj_dir = os.path.join(os.path.dirname(__file__), os.pardir, 'objects')
 # print('================')
 # print(target_obj_dir + f'{urdf_file}')
 # print('================')
+
+open
 
 
 def init_pybullet(robot_file):
@@ -73,7 +78,7 @@ def step_simulation(time_step=240):
         p.stepSimulation()
 
 
-class TestDistance(unittest.TestCase):
+class TestHelpers(unittest.TestCase):
     def test_positive_distance(self):
         distances = []
 
@@ -83,7 +88,7 @@ class TestDistance(unittest.TestCase):
             d = get_distance_of_bodies(robot, target_objects[0], i, 0)
             distances.append(d)
 
-        assert min(distances) == 1
+        assert min(distances) > 0
 
     def test_target_collision(self):
         '''Test collision with target and no collision with obstacle'''
@@ -131,6 +136,44 @@ class TestDistance(unittest.TestCase):
 
         # Collision with table
         assert max(collisions[1]) == 1
+
+    def test_in_target(self):
+        '''
+        Test checking target objects are in target box works.
+        This runs a fit specimen that puts all the target object in the box.
+        Then checks the helper correctly calculates that all target are in box.
+        '''
+        fingers_genome = FingersGenome.genome(GeneDesc)
+        brain_genome = BrainGenome.genome(fingers_genome)
+        finger_phenome = FingerPhenomeTest(fingers_genome)
+        brain_phenome = BrainPhenomeTest(brain_genome)
+        specimen = Specimen()
+        specimen.fingers = finger_phenome.genome
+        specimen.brain = brain_phenome
+        specimen.write_training_urdf() # New urdf for our phenome
+
+        with Simulation() as simulation:
+            simulation.run_specimen(specimen)
+            target_box = simulation.target_box
+            moved_objects = simulation.targets_in_box
+            in_box = check_in_target_box(moved_objects, target_box, simulation.p_id)
+
+        assert sum(in_box) == 3
+
+    def test_not_in_target(self):
+        '''
+        Test checking target objects are not in target box works.
+        Runs random specimen.
+        '''
+
+        specimen = Specimen()
+        with Simulation() as simulation:
+            simulation.run_specimen(specimen)
+            target_box = simulation.target_box
+            moved_objects = simulation.targets_in_box
+            in_box = check_in_target_box(moved_objects, target_box, simulation.p_id)
+
+        assert sum(in_box) == 0
 
 
 if __name__ == '__main__':

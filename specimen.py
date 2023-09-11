@@ -10,13 +10,25 @@ from collections import namedtuple
 from genome import FingersGenome, BrainGenome
 from phenome import FingersPhenome, BrainPhenome
 from generate_urdf import GenerateURDF
-from fitness_fun import FitnessFunction
 
 from constants import GeneDesc, ROBOT_HAND, TRAINING_DIR
 from helpers.pybullet_helpers import apply_rotation
 
 
 class Phalanx:
+    '''
+    A state that tracks attributes and performance for each phalanx in a specimen.
+    The attributes are:
+        finger_index: the index of finger the phalanx is located in a genome encoding
+        phalanx_index: the index in a finger
+        link_index: the link index in a simulation
+        inputs: distance from target, collision with target and collision with obstacle
+        output: the aggregated rotation angle to be applied
+        total_distance: accumulated distance from targets in a simulation
+        target_collision: accumulated target collision in a simulation
+        obstacle_collision: accumulated obstacle collision in a simulation
+    '''
+
     def __init__(self, finger_index, phalanx_index, link_index, inputs=[], output=0):
         self.finger_index = finger_index
         self.phalanx_index = phalanx_index
@@ -75,16 +87,10 @@ class Specimen:
     fingers = None
     brain = None
     specimen_URDF = None
-    # Distance for each phalange
-    # The first n elements are distances of fingers from the target object
-    # The last element of distance of the palm from the target object
-    distance_array = None
-    distance_total = None  # The accumulated distance for the specimen
 
-    _fitness = 0
+    _fitness = 0 # Total fitness of the specimen
 
     prev_arm_angles = []  # Keeps track of previously applied angles for the arm
-    prev_finger_angles = []  # Keeps track of previously applied angles for fingers
 
     angle_increment = np.pi / 16  # How much angle each phalanx moves at a time
 
@@ -339,24 +345,24 @@ class Specimen:
         # This is later used for smooth movement animation
         self.prev_arm_angles = action_dict[action]
 
-    def calc_fitness(self, moved_object_ids: list[int], target_box_id: int, p_id: int):
-        '''Calculates fitness of the specimen
-        Args:
-            moved_object_ids: list of successfully moved object ids
-            target_box_id: target dop box id
-            p_id: connected physics client id
-        '''
+    # def calc_fitness(self, moved_object_ids: list[int], target_box_id: int, p_id: int):
+    #     '''Calculates fitness of the specimen
+    #     Args:
+    #         moved_object_ids: list of successfully moved object ids
+    #         target_box_id: target dop box id
+    #         p_id: connected physics client id
+    #     '''
 
-        grabbing_performance = FitnessFunction.get_grabbing_performance(self._phalanges)
-        picking_performance = 0
-        for id in moved_object_ids:
-            picking_performance += FitnessFunction.get_picking_performance(
-                id, target_box_id, p_id
-            )
+    #     grabbing_performance = .get_grabbing_performance(self._phalanges)
+    #     picking_performance = 0
+    #     for id in moved_object_ids:
+    #         picking_performance += .get_picking_performance(
+    #             id, target_box_id, p_id
+    #         )
 
-        self._fitness = FitnessFunction.get_total_fitness(
-            grabbing_performance, picking_performance
-        )
+    #     self._fitness = .get_total_fitness(
+    #         grabbing_performance, picking_performance
+    #     )
 
     def save_specimen(self, generation_id: str):
         '''
@@ -390,6 +396,10 @@ class Specimen:
     @property
     def fitness(self):
         return self._fitness
+
+    @fitness.setter
+    def fitness(self, fitness: float):
+        self._fitness = fitness
 
     @property
     def phalanges(self):

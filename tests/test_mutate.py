@@ -1,32 +1,30 @@
 import unittest
-import hypothesis.strategies as st
-from hypothesis import given, settings
 import numpy as np
+from copy import deepcopy
 
 from constants import GeneDesc
 from genome import FingersGenome, BrainGenome
-from cross_mutate import CrossFingers, CrossBrain, MutateBrain, MutateFingers
+from cross_mutate import Mutate
 
 
-class TestMutateBrain(unittest.TestCase):
+class TestMutate(unittest.TestCase):
     def test_mutate(self):
-        genome = BrainGenome.genome()
-        mutated = MutateBrain.mutate(genome)
+        f_genome = FingersGenome.genome(GeneDesc)
+        b_genome = BrainGenome.genome(f_genome)
 
-        different_from_original = False
-        for i in range(len(mutated)):
-            if np.any(mutated[i] != genome[i]):
-                different_from_original = True
+        f_genome_c = deepcopy(f_genome)
+        b_genome_c = deepcopy(b_genome)
 
-        assert different_from_original
+        mut_f_genome, mut_b_genome = Mutate.mutate(
+            f_genome,
+            b_genome,
+            np.random.uniform(-0.05, 0.05),
+            np.random.uniform(-0.1, 0.1),
+        )
 
-
-class TestMutateFingers(unittest.TestCase):
-    def test_mutate(self):
-        genome = FingersGenome.genome(GeneDesc)
-        mutated = MutateFingers.mutate(genome)
-
-        assert not np.all(mutated == genome)
+        assert all(
+            (np.any(mut_f_genome != f_genome_c), np.any(mut_b_genome != b_genome_c))
+        )
 
 
 if __name__ == '__main__':

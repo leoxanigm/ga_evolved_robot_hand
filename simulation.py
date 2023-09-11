@@ -55,6 +55,14 @@ class Simulation:
         self.__initialize_pybullet()
         self.__initialize_bodies()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        # Disconnect physics server when simulation is done
+        # Source: https://stackoverflow.com/questions/865115/how-do-i-correctly-clean-up-a-python-object
+        p.disconnect(self.p_id)
+
     def __initialize_pybullet(self):
         # Remove everything from the current world
         p.resetSimulation(physicsClientId=self.p_id)
@@ -109,7 +117,7 @@ class Simulation:
         assert len(self.target_objects) > 0
 
         in_target_box = check_in_target_box(
-            self.target_objects[0], self.target_box, self.p_id
+            [self.target_objects[0]], self.target_box, self.p_id
         )
 
         # If the target is not moved to the drop location, the arm was
@@ -245,7 +253,7 @@ class Simulation:
             self.__load_next_target_object()
 
         # Calculate fitness
-        specimen.calc_fitness(self.targets_in_box, self.target_box, self.p_id)
+        # specimen.calc_fitness(self.targets_in_box, self.target_box, self.p_id)
 
         # Keep simulation running is connected via GUI
         while self.conn_method == 'GUI':
