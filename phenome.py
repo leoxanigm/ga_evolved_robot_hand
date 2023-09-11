@@ -208,18 +208,13 @@ class BrainPhenome:
     def __init__(self, brain_genome: BrainGenome = None):
         self.brain_genome = brain_genome
 
-    def trajectories(
-        self,
-        input: np.ndarray,
-        target_object: int = 0,
-        iteration: int = 0,
-    ) -> np.ndarray:
+    def trajectories(self, input: np.ndarray) -> np.ndarray:
         '''
         Performs convolution transform on a set of inputs based on convolution
         matrix genome encoding.
 
         Args:
-            inputs: an input 3D array. The inner array has the structure:
+            input: an input 3D array. The inner array has the structure:
                 [distance (1/0), collision-target (1/0), collision-obstacle (1/0))]
         '''
 

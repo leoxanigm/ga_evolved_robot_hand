@@ -210,8 +210,6 @@ class Specimen:
         get_distances: FunctionType,
         get_collisions: FunctionType,
         p_id: int,
-        target_object: int = 0,
-        iteration: int = 0,
     ):
         '''
         Moves the fingers based on inputs retrieved from callback functions.
@@ -226,7 +224,6 @@ class Specimen:
             get_collisions (function): callback function to get collision
                 of a phalanx - target object and phalanx - table. It returns
                 a tuple with boolean values 0/1 for (target, table)
-            iteration (int): the current iteration in the movement steps
             p_id (int): PyBullet connected server's simulation id
         '''
 
@@ -237,14 +234,10 @@ class Specimen:
                 if phalanx.phalanx_index == 0:
                     # Spread out the fingers
                     phalanx.output = np.pi / 4
-                    print('#######################################')
-                    print(self.fingers[phalanx.finger_index, phalanx.phalanx_index])
-                    print('#######################################')
                 else:
                     phalanx.output = 0
-        elif action == 'pick' and iteration == 0:
-            # For the first iteration of the grabbing steps, move the
-            # phalanges in a straight position
+        elif action == 'before_pick':
+            # Move the phalanges in a straight position
             for phalanx in self._phalanges:
                 phalanx.output = 0
         else:
@@ -265,8 +258,6 @@ class Specimen:
                 distance = 0 if distance == 0 else 1
                 phalanx.inputs = [distance, target_collision, obstacle_collision]
 
-            # time.sleep(30)
-
             # Get shapes to construct input np array
             genome_shape = self.fingers_genome.shape[:2]
             input_shape = len(self._phalanges[0].inputs)
@@ -282,9 +273,7 @@ class Specimen:
                 inputs[f_i][p_i] = np.array(phalanx.inputs)
 
             # Get trajectories
-            outputs = self.brain.trajectories(
-                inputs, target_object=target_object, iteration=iteration
-            )
+            outputs = self.brain.trajectories(inputs)
 
             # Populate output
             for phalanx in self._phalanges:
@@ -341,25 +330,6 @@ class Specimen:
         # Keep track of applied angles
         # This is later used for smooth movement animation
         self.prev_arm_angles = action_dict[action]
-
-    # def calc_fitness(self, moved_object_ids: list[int], target_box_id: int, p_id: int):
-    #     '''Calculates fitness of the specimen
-    #     Args:
-    #         moved_object_ids: list of successfully moved object ids
-    #         target_box_id: target dop box id
-    #         p_id: connected physics client id
-    #     '''
-
-    #     grabbing_performance = .get_grabbing_performance(self._phalanges)
-    #     picking_performance = 0
-    #     for id in moved_object_ids:
-    #         picking_performance += .get_picking_performance(
-    #             id, target_box_id, p_id
-    #         )
-
-    #     self._fitness = .get_total_fitness(
-    #         grabbing_performance, picking_performance
-    #     )
 
     def save_specimen(self, generation_id: str):
         '''

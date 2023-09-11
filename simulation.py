@@ -124,7 +124,7 @@ class Simulation:
         # If the target is not moved to the drop location, the arm was
         # not successful and we need to remove the object to clear the
         # place for the next target.
-        if not in_target_box:
+        if sum(in_target_box) == 0:
             p.removeBody(self.target_objects[0], physicsClientId=self.p_id)
         else:
             self.targets_in_box.append(self.target_objects[0])
@@ -201,8 +201,6 @@ class Simulation:
                 urdf_file, useFixedBase=1, physicsClientId=self.p_id
             )
 
-        p.stepSimulation(physicsClientId=self.p_id)
-
         # Populate phalanx state with link index
         specimen.load_state(get_genome_link_indices(self.robot, self.p_id))
 
@@ -220,14 +218,20 @@ class Simulation:
                 self.p_id,
             )
 
-            # time.sleep(15)
-
             # Move robot arm to pick up location
             specimen.move_arm('pick', self.robot, self.p_id)
 
+            # Move fingers to vertical position
+            specimen.move_fingers(
+                'before_pick',
+                self.robot,
+                self.__get_distances,
+                self.__get_collisions,
+                self.p_id,
+            )
 
             # The grabbing motion is performed by some steps
-            for i in range(5):
+            for _ in range(5):
                 # Pick up the target object
                 specimen.move_fingers(
                     'pick',
@@ -235,8 +239,6 @@ class Simulation:
                     self.__get_distances,
                     self.__get_collisions,
                     self.p_id,
-                    self.target_objects[0],
-                    i,
                 )
 
             # Move robot arm back to ready to pick location
@@ -254,13 +256,12 @@ class Simulation:
                 self.p_id,
             )
 
-            # Move robot arm to drop off location
-            specimen.move_arm(
-                'drop', self.robot, self.p_id
-            )  # To add some delay at the drop location
-            specimen.move_arm('return_to_pick', self.robot, self.p_id)
-
             self.__load_next_target_object()
+
+            # Move robot arm to drop off location
+            specimen.move_arm('drop', self.robot, self.p_id)
+
+            specimen.move_arm('return_to_pick', self.robot, self.p_id)
 
         # Set specimen fitness
         specimen.fitness = self.__calc_fitness(specimen.phalanges)

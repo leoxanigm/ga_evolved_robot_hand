@@ -152,8 +152,6 @@ def apply_rotation(body_id, joint_index, target_pos, p_id=0, prev_target_pos=Non
                 physicsClientId=p_id,
             )
 
-        p.stepSimulation(physicsClientId=p_id)
-
     elif isinstance(joint_index, int):
         if prev_target_pos:
             smooth_joint_control(
@@ -167,11 +165,12 @@ def apply_rotation(body_id, joint_index, target_pos, p_id=0, prev_target_pos=Non
                 target_pos,
                 physicsClientId=p_id,
             )
-
-        p.stepSimulation(physicsClientId=p_id)
-
     else:
         raise TypeError('joint_index must me either an integer or list of integers')
+
+    # Step simulation so that the rotations can be applied to the joints
+    for _ in range(100):
+        p.stepSimulation()
 
 
 def smooth_joint_control(
@@ -241,7 +240,7 @@ def check_in_target_box(body_ids: list[int], target_box_id: int, p_id: int) -> b
     t_min_y = box_aabb[0][1]
     t_max_y = box_aabb[1][1]
 
-    return (
+    return tuple(
         (x > t_min_x and x < t_max_x and y > t_min_y and y < t_max_y)
         for x, y, _ in positions
     )

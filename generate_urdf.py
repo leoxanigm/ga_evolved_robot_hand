@@ -152,14 +152,25 @@ class GenerateURDF:
         inertial_inertia_tag = ET.Element(
             'inertia',
             attrib={
-                'ixx': f'{link_inertia_ixx}',
-                'iyy': f'{link_inertia_iyy}',
-                'izz': f'{link_inertia_izz}',
+                'ixx': '0.001',
+                'iyy': '0.001',
+                'izz': '0.001',
                 'ixy': '0',
                 'ixz': '0',
                 'iyz': '0',
             },
         )
+        # inertial_inertia_tag = ET.Element(
+        #     'inertia',
+        #     attrib={
+        #         'ixx': f'{link_inertia_ixx}',
+        #         'iyy': f'{link_inertia_iyy}',
+        #         'izz': f'{link_inertia_izz}',
+        #         'ixy': '0',
+        #         'ixz': '0',
+        #         'iyz': '0',
+        #     },
+        # )
 
         iner_tag.append(inertial_mass_tag)
         iner_tag.append(inertial_inertia_tag)
