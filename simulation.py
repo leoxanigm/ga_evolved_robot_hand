@@ -267,8 +267,8 @@ class Simulation:
         specimen.fitness = self.__calc_fitness(specimen.phalanges)
 
         # Keep simulation running is connected via GUI
-        while self.conn_method == 'GUI':
-            p.stepSimulation(physicsClientId=self.p_id)
+        # while self.conn_method == 'GUI':
+        #     p.stepSimulation(physicsClientId=self.p_id)
 
 
 class ThreadedSim:

@@ -1,6 +1,7 @@
 import math
 from collections import namedtuple
 import numpy as np
+import random
 
 from specimen import Specimen
 from fitness_fun import FitnessFunction
@@ -34,9 +35,12 @@ class Population:
 
         # We only take top 30% fittest, and an even number of fit, to get
         # even number we divide by two, round to ceil and multiply by two
-        fit_index = math.ceil((self.pop_size // 3) / 2) * 2
+        # fit_index = math.ceil((self.pop_size // 3) / 2) * 2
 
-        self.fits = [fits.s for fits in pop_fitness][:fit_index]
+        # self.fits = [fits.s for fits in pop_fitness][:fit_index]
+
+        # For test
+        self.fits = self.fits = [fits.s for fits in pop_fitness]
 
         self.crossed = False
         self.mutated = False
@@ -45,45 +49,48 @@ class Population:
         assert self.fits is not None
         assert len(self.fits) % 2 == 0
 
+        random.shuffle(self.fits)
+
         children = []
         for i in range(0, len(self.fits), 2):
             parent_1 = self.fits[i]
             parent_2 = self.fits[i + 1]
 
-            for _ in range(2):  # Two children from the parents
-                # Get fitness maps for both parents
-                fit_map_p_1 = FitnessFunction.get_fitness_map(
-                    parent_1.phalanges, parent_1.fingers.shape
-                )
-                fit_map_p_2 = FitnessFunction.get_fitness_map(
-                    parent_2.phalanges, parent_2.fingers.shape
-                )
+            # Get fitness maps for both parents
+            fit_map_p_1 = FitnessFunction.get_fitness_map(
+                parent_1.phalanges, parent_1.fingers.shape
+            )
+            fit_map_p_2 = FitnessFunction.get_fitness_map(
+                parent_2.phalanges, parent_2.fingers.shape
+            )
 
-                # Cross the parents to create new child
-                f_g_child, b_g_child = Cross.cross_genomes(
-                    parent_1.fingers,
-                    parent_1.brain.genome,
-                    fit_map_p_1,
-                    parent_2.fingers,
-                    parent_2.brain.genome,
-                    fit_map_p_2,
-                )
+            # Cross the parents to create new child
+            f_g_child, b_g_child = Cross.cross_genomes(
+                parent_1.fingers,
+                parent_1.brain.genome,
+                fit_map_p_1,
+                parent_2.fingers,
+                parent_2.brain.genome,
+                fit_map_p_2,
+            )
 
-                # Mutate the child's genomes
-                f_g_child, b_g_child = Mutate.mutate(
-                    f_g_child,
-                    b_g_child,
-                    np.random.uniform(-0.05, 0.05),
-                    np.random.uniform(-0.1, 0.1),
-                    0.3,
-                    0.5,
-                )
+            # Mutate the child's genomes
+            f_g_child, b_g_child = Mutate.mutate(
+                f_g_child,
+                b_g_child,
+                np.random.uniform(-0.01, 0.01), # Finger genome mutation amount 
+                np.random.uniform(-0.05, 0.05), # Brain genome mutation amount 
+                0.3, # Finger genome mutation factor
+                0.3, # Brain genome mutation factor
+            )
 
-                child = Specimen(fingers_genome=f_g_child, brain_genome=b_g_child)
+            child = Specimen(fingers_genome=f_g_child, brain_genome=b_g_child)
 
-                children.append(child)
+            children.append(child)
 
-        self._specimen = children
+        # New generation will have fit parents and their children
+        self._specimen.extend(self.fits)
+        self._specimen.extend(children)
 
         self.crossed = True
         self.mutated = True

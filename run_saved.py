@@ -10,12 +10,10 @@ saved_specimen = sorted(
     [(path[0:8], path[9:17]) for path in os.listdir('fit_specimen/urdf_files/')]
 )
 
-curr_spe = saved_specimen[3]
+for curr_spe in saved_specimen:
+    gen_id = curr_spe[0]
+    spe_id = curr_spe[1]
 
-gen_id = curr_spe[0]
-spe_id = curr_spe[1]
-
-
-specimen = Specimen(generation_id=gen_id, specimen_id=spe_id)
-sim = Simulation('GUI')
-sim.run_specimen(specimen, in_training=False)
+    specimen = Specimen(generation_id=gen_id, specimen_id=spe_id)
+    with Simulation('GUI') as sim:
+        sim.run_specimen(specimen, in_training=False)

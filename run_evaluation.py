@@ -26,7 +26,7 @@ written_files.append(f'log/{t_log}_log.csv')
 try:
     for j in range(1):  # run 50 evaluations
         generation_count = 50  # for 50 generations
-        population_count = 100  # of 100 specimen each
+        population_count = 100 # of 100 specimen each
 
         run_id = str(uuid4())[:8]
 
@@ -42,7 +42,7 @@ try:
         start_time = time.time()
 
         population = Population(population_count)
-        simulation = ThreadedSim()
+        simulation = ThreadedSim(pool_size=10)
 
         for i in range(generation_count):
             print('==============')

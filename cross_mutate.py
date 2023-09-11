@@ -119,7 +119,7 @@ class Mutate:
     ):
         '''
         Mutates supplied fingers and brain genomes by specified amount and given rate
-        
+
         Args:
             finger_genome: fingers genome encoding
             brain_genome: brain genome encoding

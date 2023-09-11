@@ -18,13 +18,6 @@ from helpers.pybullet_helpers import get_distance_of_bodies, check_collisions, c
 target_urdf = ['cube.urdf', 'sphere.urdf', 'cylinder.urdf']
 target_obj_dir = os.path.join(os.path.dirname(__file__), os.pardir, 'objects')
 
-# print('================')
-# print(target_obj_dir + f'{urdf_file}')
-# print('================')
-
-open
-
-
 def init_pybullet(robot_file):
     # Comments describing the steps here can be found in specimen.py file
     global robot
