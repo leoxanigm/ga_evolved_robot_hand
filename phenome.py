@@ -146,20 +146,13 @@ class FingersPhenome:
                 phalanx[GeneDesc.JOINT_ORIGIN_X] = palm_dim_x * x_quadrant
                 phalanx[GeneDesc.JOINT_ORIGIN_Y] = phalanx_dim_y
 
-            # Attach link at the end of palm
-            phalanx[GeneDesc.JOINT_ORIGIN_Z] = parent_dim_z + (
-                phalanx[GeneDesc.DIM_Z] / 2
-            )
-
         else:
             # Other phalanges are attached to the center of their parent phalanx
             phalanx[GeneDesc.JOINT_ORIGIN_X] = 0
             phalanx[GeneDesc.JOINT_ORIGIN_Y] = 0
 
-            # Attach link at the end of parent phalanx
-            phalanx[GeneDesc.JOINT_ORIGIN_Z] = (parent_dim_z / 2) + (
-                phalanx[GeneDesc.DIM_Z] / 2
-            )
+        # Attach link at the end of parent phalanx
+        phalanx[GeneDesc.JOINT_ORIGIN_Z] = parent_dim_z
 
         return phalanx[GeneDesc.DIM_Z]
 

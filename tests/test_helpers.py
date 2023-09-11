@@ -152,7 +152,7 @@ class TestHelpers(unittest.TestCase):
         specimen.brain = brain_phenome
         specimen.write_training_urdf() # New urdf for our phenome
 
-        with Simulation() as simulation:
+        with Simulation('GUI') as simulation:
             simulation.run_specimen(specimen)
             target_box = simulation.target_box
             moved_objects = simulation.targets_in_box

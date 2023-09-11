@@ -15,7 +15,8 @@ from helpers.pybullet_helpers import (
 )
 
 from population import Population
-from specimen import Specimen
+from specimen import Specimen, Phalanx
+from fitness_fun import FitnessFunction
 
 object_URDF = ['cube.urdf', 'sphere.urdf', 'cylinder.urdf']
 
@@ -181,6 +182,12 @@ class Simulation:
             self.robot, self.target_objects[0], self.table, link_index, self.p_id
         )
 
+    def __calc_fitness(self, phalanges: list[Phalanx]):
+        picking_performance = FitnessFunction.get_picking_performance(
+            self.targets_in_box, self.target_box, self.p_id
+        )
+        return FitnessFunction.get_total_fitness(phalanges, picking_performance)
+
     def run_specimen(self, specimen: Specimen, in_training=True):
         # Load specimen
         if in_training:
@@ -213,8 +220,11 @@ class Simulation:
                 self.p_id,
             )
 
+            # time.sleep(15)
+
             # Move robot arm to pick up location
             specimen.move_arm('pick', self.robot, self.p_id)
+
 
             # The grabbing motion is performed by some steps
             for i in range(5):
@@ -252,8 +262,8 @@ class Simulation:
 
             self.__load_next_target_object()
 
-        # Calculate fitness
-        # specimen.calc_fitness(self.targets_in_box, self.target_box, self.p_id)
+        # Set specimen fitness
+        specimen.fitness = self.__calc_fitness(specimen.phalanges)
 
         # Keep simulation running is connected via GUI
         while self.conn_method == 'GUI':

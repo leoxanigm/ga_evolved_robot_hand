@@ -88,7 +88,7 @@ class Specimen:
     brain = None
     specimen_URDF = None
 
-    _fitness = 0 # Total fitness of the specimen
+    _fitness = 0  # Total fitness of the specimen
 
     prev_arm_angles = []  # Keeps track of previously applied angles for the arm
 
@@ -143,6 +143,7 @@ class Specimen:
             self.fingers = self.fingers_phenome.load_genome(
                 f'fit_specimen/genome_encodings/{generation_id}_fingers_{specimen_id}.pickle'
             )
+            self._fingers_genome = self.fingers_phenome.genome
 
             self.specimen_URDF = f'{generation_id}_{specimen_id}.urdf'
 
@@ -151,6 +152,7 @@ class Specimen:
             self.brain.load_genome(
                 f'fit_specimen/genome_encodings/{generation_id}_brain_{specimen_id}.pickle'
             )
+            self._brain_genome = self.brain.genome
 
             return
 
@@ -229,11 +231,15 @@ class Specimen:
         '''
 
         p.stepSimulation(physicsClientId=p_id)
+
         if action == 'ready_to_pick' or action == 'drop':
             for phalanx in self._phalanges:
                 if phalanx.phalanx_index == 0:
                     # Spread out the fingers
-                    phalanx.output = -np.pi / 4
+                    phalanx.output = np.pi / 4
+                    print('#######################################')
+                    print(self.fingers[phalanx.finger_index, phalanx.phalanx_index])
+                    print('#######################################')
                 else:
                     phalanx.output = 0
         elif action == 'pick' and iteration == 0:
@@ -275,16 +281,10 @@ class Specimen:
 
                 inputs[f_i][p_i] = np.array(phalanx.inputs)
 
-            # print('===============')
-            # print(f'inputs {inputs}')
-
             # Get trajectories
             outputs = self.brain.trajectories(
                 inputs, target_object=target_object, iteration=iteration
             )
-
-            # print(f'outputs {outputs}')
-            # print('===============')
 
             # Populate output
             for phalanx in self._phalanges:
@@ -295,9 +295,6 @@ class Specimen:
 
         link_indices = [p.link_index for p in self._phalanges]
         target_angles = [p.output for p in self._phalanges]
-
-        # print(f'target_angles {target_angles}')
-        # print('===============')
 
         apply_rotation(body_id, link_indices, target_angles, p_id)
 
@@ -409,21 +406,6 @@ class Specimen:
     def fingers_genome(self):
         return self._fingers_genome
 
-    @fingers_genome.setter
-    def fingers_genome(self, fingers_genome):
-        assert isinstance(fingers_genome, np.ndarray)
-
-        self._fingers_genome = fingers_genome
-        self.__init_fingers()
-
     @property
     def brain_genome(self):
         return self._brain_genome
-
-    @brain_genome.setter
-    def brain_genome(self, brain_genome):
-        assert isinstance(brain_genome, list)
-        assert isinstance(brain_genome[0], np.ndarray)
-
-        self._brain_genome = brain_genome
-        self.__init_brain()

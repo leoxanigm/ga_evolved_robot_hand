@@ -1,7 +1,16 @@
 import math
+from collections import namedtuple
+import numpy as np
 
 from specimen import Specimen
+from fitness_fun import FitnessFunction
+from cross_mutate import Cross, Mutate
+
 from constants import GeneDesc, ROBOT_HAND
+
+
+Fits = namedtuple('Fits', ('f', 's'))
+'''Tuple to hold state of fit specimen. f - fitness, s - specimen'''
 
 
 class Population:
@@ -10,28 +19,29 @@ class Population:
         self._specimen = [Specimen() for _ in range(pop_size)]
         self.fits: list[Specimen] = None  # Top 30% fittest specimen
 
-        self.crossed = False # Check for crossing
-        self.mutated = False # Check for mutation
+        self.crossed = False  # Check for crossing
+        self.mutated = False  # Check for mutation
 
-        self.pop_fitness = None
+        self.pop_fitness: list[Fits] = None
 
     def calc_fits(self):
-        pop_fitness = [(s.fitness, s) for s in self._specimen]
-        pop_fitness = sorted(pop_fitness, key=lambda x: x[0], reverse=True)
+        # Get fitnesses with corresponding specimen
+        pop_fitness = [Fits(s.fitness, s) for s in self._specimen]
+        # Sort specimen by their fitness
+        pop_fitness = sorted(pop_fitness, key=lambda x: x.f, reverse=True)
 
         self.pop_fitness = pop_fitness
 
-        # We only take top 30% fittest, and an even number of fit,
-        # to get even number we divide by two, round to ceil and multipy
-        # by two
-        fit_index = math.ceil((len(self._specimen) // 3) / 2) * 2
+        # We only take top 30% fittest, and an even number of fit, to get
+        # even number we divide by two, round to ceil and multiply by two
+        fit_index = math.ceil((self.pop_size // 3) / 2) * 2
 
-        self.fits = [s for _, s in pop_fitness][:fit_index]
+        self.fits = [fits.s for fits in pop_fitness][:fit_index]
 
         self.crossed = False
         self.mutated = False
 
-    def cross(self):
+    def cross_mutate(self):
         assert self.fits is not None
         assert len(self.fits) % 2 == 0
 
@@ -41,31 +51,41 @@ class Population:
             parent_2 = self.fits[i + 1]
 
             for _ in range(2):  # Two children from the parents
-                child_fingers_genome = CrossFingers.cross_genomes(
-                    parent_1.fingers_genome, parent_2.fingers_genome
+                # Get fitness maps for both parents
+                fit_map_p_1 = FitnessFunction.get_fitness_map(
+                    parent_1.phalanges, parent_1.fingers.shape
                 )
-                child_brain_genome = CrossBrain.cross_genomes(
-                    parent_1.brain_genome, parent_2.brain_genome
-                )
-
-                child_specimen = Specimen(
-                    fingers_genome=child_fingers_genome, brain_genome=child_brain_genome
+                fit_map_p_2 = FitnessFunction.get_fitness_map(
+                    parent_2.phalanges, parent_2.fingers.shape
                 )
 
-                children.append(child_specimen)
+                # Cross the parents to create new child
+                f_g_child, b_g_child = Cross.cross_genomes(
+                    parent_1.fingers,
+                    parent_1.brain.genome,
+                    fit_map_p_1,
+                    parent_2.fingers,
+                    parent_2.brain.genome,
+                    fit_map_p_2,
+                )
 
-        self.specimen = children
+                # Mutate the child's genomes
+                f_g_child, b_g_child = Mutate.mutate(
+                    f_g_child,
+                    b_g_child,
+                    np.random.uniform(-0.05, 0.05),
+                    np.random.uniform(-0.1, 0.1),
+                    0.3,
+                    0.5,
+                )
+
+                child = Specimen(fingers_genome=f_g_child, brain_genome=b_g_child)
+
+                children.append(child)
+
+        self._specimen = children
 
         self.crossed = True
-
-    def mutate(self):
-        # Make sure we only mutate after crossing
-        assert self.crossed and not self.mutated
-
-        for specimen in self._specimen:
-            specimen.fingers_genome = MutateFingers.mutate(specimen.fingers_genome)
-            # specimen.brain_genome = MutateBrain.mutate(specimen.brain_genome)
-
         self.mutated = True
 
     def repopulate(self):
