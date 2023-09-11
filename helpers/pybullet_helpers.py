@@ -169,7 +169,7 @@ def apply_rotation(body_id, joint_index, target_pos, p_id=0, prev_target_pos=Non
         raise TypeError('joint_index must me either an integer or list of integers')
 
     # Step simulation so that the rotations can be applied to the joints
-    for _ in range(1200):
+    for _ in range(100):
         p.stepSimulation()
 
 
@@ -194,7 +194,7 @@ def smooth_joint_control(
         joint_motor_control_function (function): joint motor control function to use
     '''
 
-    steps = 1200
+    steps = 2400
 
     if isinstance(target_pos, list):
         pos_difference = [t_pos - p_pos for t_pos, p_pos in zip(target_pos, prev_pos)]

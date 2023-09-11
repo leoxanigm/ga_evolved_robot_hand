@@ -23,8 +23,6 @@ run_success = False
 write_csv(f'log/{t_log}_log.csv', ['iteration_id', 'total_run_time(s)', 'pop_count'])
 written_files.append(f'log/{t_log}_log.csv')
 
-write_csv(f'log/{t_log}_urdf_log.csv', ['urdf_name', 'generation_id'])
-
 try:
     for j in range(50):  # run 50 evaluations
         generation_count = 50  # for 50 generations
@@ -50,9 +48,6 @@ try:
             print('==============')
             print(f'Evaluating generation {i}...')
             print('==============')
-
-            for s in population.specimen:
-                write_csv(f'log/{t_log}_urdf_log.csv', [s.specimen_URDF, i])
 
             generation_id = str(uuid4())[:8]
 
