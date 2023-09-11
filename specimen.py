@@ -114,7 +114,7 @@ class Specimen:
         self._phalanges: list[Phalanx] = []
 
         # Increment angle for each iteration of fingers' movement
-        self.angle_increment = np.pi / 16
+        self.angle_increment = np.pi / 32
 
         # Assign a unique id
         # Use first 8 characters to avoid long file names
@@ -181,12 +181,16 @@ class Specimen:
         training_folder_path = TRAINING_DIR
         output_file = f'{self.id}.urdf'
 
+        if len(self.id) < 1:
+            raise RuntimeError('Specimen id is needed to write robot URDF file.')
+
         assert os.path.exists(self.robot_hand)
 
         generate_urdf = GenerateURDF(self.fingers)
         urdf_written = generate_urdf.generate_robot_fingers(
             self.robot_hand, training_folder_path + output_file
         )
+
         if urdf_written:
             self.specimen_URDF = output_file
         else:

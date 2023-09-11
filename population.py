@@ -35,12 +35,9 @@ class Population:
 
         # We only take top 30% fittest, and an even number of fit, to get
         # even number we divide by two, round to ceil and multiply by two
-        # fit_index = math.ceil((self.pop_size // 3) / 2) * 2
+        fit_index = math.ceil((self.pop_size // 3) / 2) * 2
 
-        # self.fits = [fits.s for fits in pop_fitness][:fit_index]
-
-        # For test
-        self.fits = self.fits = [fits.s for fits in pop_fitness]
+        self.fits = [fits.s for fits in pop_fitness][:fit_index]
 
         self.crossed = False
         self.mutated = False
@@ -74,14 +71,28 @@ class Population:
                 fit_map_p_2,
             )
 
+            # The more fit the parents, the less we want to mutate the child
+            avg_fitness = (parent_1.fitness + parent_2.fitness) / 2
+
+            # Mutation factor
+            mut_factor = 1 / ((1 + avg_fitness) ** 2)
+
+            # Finger genome mutation amount
+            f_mut_amount = 0.05 / ((1 + avg_fitness) ** 2)
+            f_mut_amount = np.random.uniform(-f_mut_amount, f_mut_amount)
+            
+            # Brain genome mutation amount
+            g_mut_amount = 0.1 / ((1 + avg_fitness) ** 2)
+            g_mut_amount = np.random.uniform(-g_mut_amount, g_mut_amount)
+
             # Mutate the child's genomes
             f_g_child, b_g_child = Mutate.mutate(
                 f_g_child,
                 b_g_child,
-                np.random.uniform(-0.01, 0.01), # Finger genome mutation amount 
-                np.random.uniform(-0.05, 0.05), # Brain genome mutation amount 
-                0.3, # Finger genome mutation factor
-                0.3, # Brain genome mutation factor
+                f_mut_amount,
+                g_mut_amount,
+                mut_factor,
+                mut_factor,
             )
 
             child = Specimen(fingers_genome=f_g_child, brain_genome=b_g_child)
@@ -100,9 +111,9 @@ class Population:
         assert self.crossed and self.mutated
 
         # Add new random specimen to repopulate to the population size
-        curr_pop_size = len(self.specimen)
+        curr_pop_size = len(self._specimen)
         for _ in range(self.pop_size - curr_pop_size):
-            self.specimen.append(Specimen())
+            self._specimen.append(Specimen())
 
     @property
     def specimen(self):

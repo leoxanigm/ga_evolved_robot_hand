@@ -23,8 +23,10 @@ run_success = False
 write_csv(f'log/{t_log}_log.csv', ['iteration_id', 'total_run_time(s)', 'pop_count'])
 written_files.append(f'log/{t_log}_log.csv')
 
+write_csv(f'log/{t_log}_urdf_log.csv', ['urdf_name', 'generation_id'])
+
 try:
-    for j in range(1):  # run 50 evaluations
+    for j in range(50):  # run 50 evaluations
         generation_count = 50  # for 50 generations
         population_count = 100 # of 100 specimen each
 
@@ -37,17 +39,20 @@ try:
         written_files.append(f'fit_specimen/{run_id}.csv')
 
         # clean training directory
-        clear_training_dir()
+        # clear_training_dir()
 
         start_time = time.time()
 
         population = Population(population_count)
-        simulation = ThreadedSim(pool_size=10)
+        simulation = ThreadedSim()
 
         for i in range(generation_count):
             print('==============')
             print(f'Evaluating generation {i}...')
             print('==============')
+
+            for s in population.specimen:
+                write_csv(f'log/{t_log}_urdf_log.csv', [s.specimen_URDF, i])
 
             generation_id = str(uuid4())[:8]
 
@@ -62,7 +67,7 @@ try:
             pop_fitness = population.pop_fitness
 
             # Save the fittest specimen of this generation
-            if pop_fitness[0].f > 0.3:
+            if pop_fitness[0].f > 0.5:
                 pop_fitness[0].s.save_specimen(generation_id)
 
             # Write log for this generation
@@ -72,7 +77,7 @@ try:
             )
 
         # clean training directory
-        clear_training_dir()
+        # clear_training_dir()
 
         # Write log for current iteration
         write_csv(
@@ -91,5 +96,8 @@ except Exception as e:
         for file_path in written_files:
             if os.path.isfile(file_path):
                 os.remove(file_path)
+
+    # clean training directory
+    # clear_training_dir()
 
     raise e

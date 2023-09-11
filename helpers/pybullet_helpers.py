@@ -169,7 +169,7 @@ def apply_rotation(body_id, joint_index, target_pos, p_id=0, prev_target_pos=Non
         raise TypeError('joint_index must me either an integer or list of integers')
 
     # Step simulation so that the rotations can be applied to the joints
-    for _ in range(100):
+    for _ in range(1200):
         p.stepSimulation()
 
 
@@ -244,22 +244,3 @@ def check_in_target_box(body_ids: list[int], target_box_id: int, p_id: int) -> b
         (x > t_min_x and x < t_max_x and y > t_min_y and y < t_max_y)
         for x, y, _ in positions
     )
-
-    # curr_pos_x = curr_pos[0]
-    # curr_pos_y = curr_pos[1]
-
-    # # Get box boundaries
-    # t_min_x = box_aabb[0][0]
-    # t_max_x = box_aabb[1][0]
-    # t_min_y = box_aabb[0][1]
-    # t_max_y = box_aabb[1][1]
-
-    # if (
-    #     curr_pos_x > t_min_x
-    #     and curr_pos_x < t_max_x
-    #     and curr_pos_y > t_min_y
-    #     and curr_pos_y < t_max_y
-    # ):
-    #     return True
-
-    # return False

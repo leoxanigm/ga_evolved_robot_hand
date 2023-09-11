@@ -30,8 +30,15 @@ class Simulation:
         elif conn_method == 'GUI':
             self.p_id = p.connect(p.GUI)
             p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0, physicsClientId=self.p_id)
+            # p.resetDebugVisualizerCamera(
+            #     5, 0, 200, [0, -3, -0.5], physicsClientId=self.p_id
+            # )
             p.resetDebugVisualizerCamera(
-                5, 0, 200, [0, -3, -0.5], physicsClientId=self.p_id
+                3.26,
+                -74.8,
+                197.2,
+                (-1.58, -0.46, -0.13),
+                physicsClientId=self.p_id,
             )
 
         p.resetSimulation(physicsClientId=self.p_id)

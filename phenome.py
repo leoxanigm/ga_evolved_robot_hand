@@ -231,9 +231,10 @@ class BrainPhenome:
         output = np.sum(output, axis=(2, 3, 4))
 
         # Map the results to -1, 0 and 1
-        output[output < -0.2] = -1
-        output[output > 0.2] = 1
-        output[(output >= -0.2) & (output <= 0.2)] = 0
+        map_factor = 0.2
+        output[output < -map_factor] = -1
+        output[output > map_factor] = 1
+        output[(output >= -map_factor) & (output <= map_factor)] = 0
 
         return output
 
