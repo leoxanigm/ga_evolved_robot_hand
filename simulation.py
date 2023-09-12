@@ -1,7 +1,7 @@
 import os
 import pybullet as p
 import numpy as np
-from multiprocessing import Process, Manager, current_process
+from multiprocessing import Process, Manager, current_process, Semaphore
 import time
 
 from typing import Literal
@@ -313,29 +313,45 @@ class ThreadedSim:
         '''
         Runs simulation for all specimen in a population
         in multi-threaded environment
+        Source: https://docs.python.org/3/library/multiprocessing.html
 
         Args:
             population (Population): A population of specimen
         '''
 
-        def add_specimen(specimen: Specimen, specimen_list: list[Specimen]):
+        def add_specimen(
+            specimen: Specimen, specimen_list: list[Specimen], sema: Semaphore
+        ):
             '''Function to be passed to a process. It Evaluates a specimen
             and adds it to a result list'''
 
             specimen = ThreadedSim.run_specimen(specimen)
             specimen_list.append(specimen)
 
+            # Add 1 to sema so that processes can continue running
+            sema.release()
+
         specimens = population.specimen
 
         evaluated_specimen = []
         processes = []
 
+        # Using Semaphore to only run specified amount of threads
+        # Useful when we want to do other tasks while evaluation is running
+        # Source: https://stackoverflow.com/questions/20886565/using-multiprocessing-process-with-a-maximum-number-of-simultaneous-processes
+        sema = Semaphore(self.pool_size)
+
         with Manager() as manager:
             specimen_list = manager.list()
 
             for i, specimen in enumerate(specimens):
+                # Reserve process (add 1) for each one started
+                sema.acquire()
+
                 process = Process(
-                    target=add_specimen, args=(specimen, specimen_list), name=f'{i}'
+                    target=add_specimen,
+                    args=(specimen, specimen_list, sema),
+                    name=f'{i}',
                 )
                 process.start()
                 processes.append(process)
@@ -363,67 +379,3 @@ class ThreadedSim:
 
         # update the population
         population.specimen = evaluated_specimen
-
-    # def run_population(self, population: Population):
-    #     '''
-    #     Runs simulation for all specimen in a population
-    #     in multi-threaded environment
-
-    #     Args:
-    #         population (Population): A population of specimen
-    #     '''
-
-    #     pool_args = []
-    #     start_ind = 0
-
-    #     len_specimen = len(population.specimen)
-
-    #     # Add a list of arguments to run the specimen for
-    #     # the number of pool_size
-    #     while start_ind < len_specimen:
-    #         # Arguments for one run of a pool
-    #         curr_pool_args = []
-
-    #         for i in range(start_ind, start_ind + self.pool_size):
-    #             if i >= len_specimen:  # reached the end
-    #                 break
-
-    #             curr_pool_args.append((population.specimen[i], ))
-
-    #         pool_args.append(curr_pool_args)
-
-    #         start_ind = start_ind + self.pool_size
-
-    #     new_specimen = []
-
-    #     for pool_argset in pool_args:
-    #         with Pool(self.pool_size, maxtasksperchild=1) as pool:
-    #             # https://docs.python.org/3/library/multiprocessing.html#using-a-pool-of-workers
-
-    #             results = [
-    #                 pool.apply_async(ThreadedSim.run_specimen, args)
-    #                 for args in pool_argset
-    #             ]
-    #             for i, res in enumerate(results):
-    #                 try:
-    #                     # Only evaluate a specimen for max 20 seconds
-    #                     evaluated_specimen = res.get(timeout=1)
-    #                     new_specimen.append(evaluated_specimen)
-    #                 except TE: # TimeoutError
-    #                     # Set the specimen's fitness to zero
-    #                     # We don't remove the specimen now, as we want the size of population
-    #                     # to stay consistent
-    #                     failed_specimen = pool_argset[i][0]
-    #                     failed_specimen.fitness = 0
-    #                     new_specimen.append(failed_specimen)
-    #                     pool.terminate()
-    #                     pass
-
-    #             # evaluated_specimen = pool.starmap(
-    #             #     ThreadedSim.run_specimen, pool_argset
-    #             # )
-
-    #             # new_specimen.extend(evaluated_specimen)
-
-    #     # update the population
-    #     population.specimen = new_specimen
