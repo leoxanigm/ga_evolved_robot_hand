@@ -146,12 +146,19 @@ class Mutate:
         # Mutate brain genome
         with np.nditer(fit_map, flags=['multi_index'], op_flags=['readwrite']) as it:
             for f_m in it:
-                if f_m > 0:
-                    i = it.multi_index
-                    # Brain genome mutation amount
+                # Brain genome mutation amount
+                g_mut_amount = 0
+                if f_m > 0 and f_m <= 0.3:
                     g_mut_amount = 0.5 / ((1 + f_m) ** 2)
                     g_mut_amount = random.choice([-g_mut_amount, g_mut_amount])
+                if f_m > 0.3 and f_m <= 0.6:
+                    g_mut_amount = 0.2 / ((1 + f_m) ** 2)
+                    g_mut_amount = random.choice([-g_mut_amount, g_mut_amount])
+                if f_m > 0.6 and f_m < 0.85:
+                    g_mut_amount = 0.05 / ((1 + f_m) ** 2)
+                    g_mut_amount = random.choice([-g_mut_amount, g_mut_amount])
 
-                    brain_genome[i] += g_mut_amount
+                i = it.multi_index
+                brain_genome[i] += g_mut_amount
 
         return finger_genome, brain_genome

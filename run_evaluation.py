@@ -25,8 +25,8 @@ written_files.append(f'log/{t_log}_log.csv')
 
 try:
     for j in range(1):  # run 50 evaluations
-        generation_count = 50  # for 50 generations
-        population_count = 100  # of 100 specimen each
+        generation_count = 5  # for 50 generations
+        population_count = 10  # of 100 specimen each
 
         run_id = str(uuid4())[:8]
 
@@ -58,17 +58,21 @@ try:
             population.repopulate()
 
             # We just want the fitness information
-            # Where population.pop_fitness is a list of (fitness, specimen)
-            pop_fitness = population.pop_fitness
+            # Where population.fittest is a list of (fitness, specimen)
+            fittest = population.fittest
 
             # Save the fittest specimen of this generation
-            if pop_fitness[0].f > 0.5:
-                pop_fitness[0].s.save_specimen(generation_id)
+            if fittest[0].f > 0.5:
+                fittest[0].s.save_specimen(generation_id)
+
+            print(
+                f'Max fitness for generation {i} = {fittest[0].f}, id = {fittest[0].s.id}'
+            )
 
             # Write log for this generation
             write_csv(
                 f'fit_specimen/{run_id}.csv',
-                [generation_id, i, pop_fitness[0].f],
+                [generation_id, i, fittest[0].f],
             )
 
         # clean training directory

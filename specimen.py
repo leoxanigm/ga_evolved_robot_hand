@@ -383,3 +383,6 @@ class Specimen:
     @property
     def brain_genome(self):
         return self._brain_genome
+
+    def __repr__(self):
+        return f'id - {self.id}, fitness - {self.fitness}'

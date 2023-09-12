@@ -304,8 +304,8 @@ class ThreadedSim:
 
     @staticmethod
     def run_specimen(specimen: Specimen):
-        simulation = Simulation()
-        simulation.run_specimen(specimen)
+        with Simulation() as simulation:
+            simulation.run_specimen(specimen)
 
         return specimen
 
