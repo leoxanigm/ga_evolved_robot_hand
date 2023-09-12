@@ -24,9 +24,9 @@ write_csv(f'log/{t_log}_log.csv', ['iteration_id', 'total_run_time(s)', 'pop_cou
 written_files.append(f'log/{t_log}_log.csv')
 
 try:
-    for j in range(50):  # run 50 evaluations
+    for j in range(1):  # run 50 evaluations
         generation_count = 50  # for 50 generations
-        population_count = 100 # of 100 specimen each
+        population_count = 100  # of 100 specimen each
 
         run_id = str(uuid4())[:8]
 
@@ -46,7 +46,7 @@ try:
 
         for i in range(generation_count):
             print('==============')
-            print(f'Evaluating generation {i}...')
+            print(f'Evaluating generation {i} at {time.ctime()[11:19]} ...')
             print('==============')
 
             generation_id = str(uuid4())[:8]

@@ -1,8 +1,7 @@
 import os
 import pybullet as p
 import numpy as np
-from multiprocessing import Pool
-from multiprocessing.context import TimeoutError as TE
+from multiprocessing import Process, Manager, current_process
 import time
 
 from typing import Literal
@@ -300,10 +299,11 @@ class ThreadedSim:
     '''
 
     def __init__(self, pool_size=os.cpu_count()):
+        # Number of cores to use
         self.pool_size = pool_size
 
     @staticmethod
-    def static_run_specimen(specimen: Specimen):
+    def run_specimen(specimen: Specimen):
         simulation = Simulation()
         simulation.run_specimen(specimen)
 
@@ -318,56 +318,112 @@ class ThreadedSim:
             population (Population): A population of specimen
         '''
 
-        pool_args = []
-        start_ind = 0
+        def add_specimen(specimen: Specimen, specimen_list: list[Specimen]):
+            '''Function to be passed to a process. It Evaluates a specimen
+            and adds it to a result list'''
 
-        len_specimen = len(population.specimen)
+            specimen = ThreadedSim.run_specimen(specimen)
+            specimen_list.append(specimen)
 
-        # Add a list of arguments to run the specimen for
-        # the number of pool_size
-        while start_ind < len_specimen:
-            # Arguments for one run of a pool
-            curr_pool_args = []
+        specimens = population.specimen
 
-            for i in range(start_ind, start_ind + self.pool_size):
-                if i >= len_specimen:  # reached the end
-                    break
+        evaluated_specimen = []
+        processes = []
 
-                curr_pool_args.append((population.specimen[i], ))
+        with Manager() as manager:
+            specimen_list = manager.list()
 
-            pool_args.append(curr_pool_args)
+            for i, specimen in enumerate(specimens):
+                process = Process(
+                    target=add_specimen, args=(specimen, specimen_list), name=f'{i}'
+                )
+                process.start()
+                processes.append(process)
 
-            start_ind = start_ind + self.pool_size
+            # We are going to run a specimen for a maximum of 20 seconds
+            end_time = time.time() + 20
 
-        new_specimen = []
+            while time.time() < end_time and processes:
+                for process in processes.copy():
+                    process.join(timeout=0.1)  # Periodically join to check status
+                    if not process.is_alive():
+                        # We don't need to track the process if it's finished
+                        processes.remove(process)
 
-        for pool_argset in pool_args:
-            with Pool(self.pool_size) as pool:
-                # https://docs.python.org/3/library/multiprocessing.html#using-a-pool-of-workers
+            # Terminate any still-running processes after 20 seconds
+            for process in processes:
+                if process.is_alive():
+                    # If evaluation for a specimen runs more than 20 seconds,
+                    # discard the specimen by setting its fitness to 0.
+                    specimens[int(process.name)].fitness = 0
+                    evaluated_specimen.append(specimens[int(process.name)])
+                    process.terminate()
 
-                results = [
-                    pool.apply_async(ThreadedSim.static_run_specimen, args)
-                    for args in pool_argset
-                ]
-                for i, res in enumerate(results):
-                    try:
-                        # Only evaluate a specimen for max 20 seconds
-                        evaluated_specimen = res.get(timeout=20)
-                        new_specimen.append(evaluated_specimen)
-                    except TE: # TimeoutError
-                        # Set the specimen's fitness to zero
-                        # We don't remove the specimen now, as we want the size of population
-                        # to stay consistent
-                        failed_specimen = pool_argset[i][0]
-                        failed_specimen.fitness = 0
-                        new_specimen.append(failed_specimen)
-                        pass
-
-                # evaluated_specimen = pool.starmap(
-                #     ThreadedSim.static_run_specimen, pool_argset
-                # )
-
-                # new_specimen.extend(evaluated_specimen)
+            evaluated_specimen.extend(list(specimen_list))
 
         # update the population
-        population.specimen = new_specimen
+        population.specimen = evaluated_specimen
+
+    # def run_population(self, population: Population):
+    #     '''
+    #     Runs simulation for all specimen in a population
+    #     in multi-threaded environment
+
+    #     Args:
+    #         population (Population): A population of specimen
+    #     '''
+
+    #     pool_args = []
+    #     start_ind = 0
+
+    #     len_specimen = len(population.specimen)
+
+    #     # Add a list of arguments to run the specimen for
+    #     # the number of pool_size
+    #     while start_ind < len_specimen:
+    #         # Arguments for one run of a pool
+    #         curr_pool_args = []
+
+    #         for i in range(start_ind, start_ind + self.pool_size):
+    #             if i >= len_specimen:  # reached the end
+    #                 break
+
+    #             curr_pool_args.append((population.specimen[i], ))
+
+    #         pool_args.append(curr_pool_args)
+
+    #         start_ind = start_ind + self.pool_size
+
+    #     new_specimen = []
+
+    #     for pool_argset in pool_args:
+    #         with Pool(self.pool_size, maxtasksperchild=1) as pool:
+    #             # https://docs.python.org/3/library/multiprocessing.html#using-a-pool-of-workers
+
+    #             results = [
+    #                 pool.apply_async(ThreadedSim.run_specimen, args)
+    #                 for args in pool_argset
+    #             ]
+    #             for i, res in enumerate(results):
+    #                 try:
+    #                     # Only evaluate a specimen for max 20 seconds
+    #                     evaluated_specimen = res.get(timeout=1)
+    #                     new_specimen.append(evaluated_specimen)
+    #                 except TE: # TimeoutError
+    #                     # Set the specimen's fitness to zero
+    #                     # We don't remove the specimen now, as we want the size of population
+    #                     # to stay consistent
+    #                     failed_specimen = pool_argset[i][0]
+    #                     failed_specimen.fitness = 0
+    #                     new_specimen.append(failed_specimen)
+    #                     pool.terminate()
+    #                     pass
+
+    #             # evaluated_specimen = pool.starmap(
+    #             #     ThreadedSim.run_specimen, pool_argset
+    #             # )
+
+    #             # new_specimen.extend(evaluated_specimen)
+
+    #     # update the population
+    #     population.specimen = new_specimen
