@@ -2,23 +2,24 @@ import unittest
 import hypothesis.strategies as st
 from hypothesis import given, settings
 import numpy as np
+from copy import deepcopy
 
 from constants import GeneDesc
 from genome import FingersGenome, BrainGenome
 from specimen import Specimen
 from simulation import Simulation
 from fitness_fun import FitnessFunction
-from cross_mutate import Cross
+from cross_mutate import CrossMutate, Mutate
 
 
-class TestCross(unittest.TestCase):
+class TestCrossMutate(unittest.TestCase):
     specimen_1 = None
     specimen_2 = None
     child = None
 
     @classmethod
     def setUpClass(cls):
-        super(TestCross, cls).setUpClass()
+        super(TestCrossMutate, cls).setUpClass()
 
         cls.specimen_1 = Specimen()
         cls.specimen_2 = Specimen()
@@ -34,7 +35,7 @@ class TestCross(unittest.TestCase):
                 cls.specimen_2.phalanges, cls.specimen_2.fingers.shape
             )
 
-        cls.child = Cross.cross_genomes(
+        cls.child = CrossMutate.cross_mutate_genomes(
             cls.specimen_1.fingers,
             cls.specimen_1.brain.genome,
             cls.fit_parent_1,
@@ -92,20 +93,21 @@ class TestCross(unittest.TestCase):
                 if (f + p) == (index_sum + 1):
                     index_sum += f + p
 
-    # def test_child_len_between_parents(self):
-    #     '''Test number of phalanges in child are not fewer or greater
-    #     than number of phalanges in the parents.'''
+    def test_mutate(self):
+        f_g_child = deepcopy(self.child[0])
+        b_g_child = deepcopy(self.child[1])
 
-    #     num_pha_par_1 = np.sum(self.specimen_1.fingers != 0)
-    #     num_pha_par_2 = np.sum(self.specimen_2.fingers != 0)
-    #     num_pha_par_child = np.sum(self.child[0] != 0)
+        fitness_mask = CrossMutate.get_genome_mask(self.fit_parent_1, self.fit_parent_2)
 
-    #     assert all(
-    #         (
-    #             num_pha_par_child >= min(num_pha_par_1, num_pha_par_2),
-    #             num_pha_par_child <= max(num_pha_par_1, num_pha_par_2),
-    #         )
-    #     )
+        fit_child = np.zeros(self.specimen_1.fingers.shape)
+        fit_child[fitness_mask] = self.specimen_1.fingers[fitness_mask]
+        fit_child[np.invert(fitness_mask)] = self.specimen_2.fingers[np.invert(fitness_mask)]
+
+        mut_f_genome, mut_b_genome = Mutate.mutate(self.child[0], self.child[1], fit_child)
+
+        assert all(
+            (np.any(mut_f_genome != f_g_child), np.any(mut_b_genome != b_g_child))
+        )
 
 
 if __name__ == '__main__':

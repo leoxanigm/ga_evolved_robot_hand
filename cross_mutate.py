@@ -8,9 +8,9 @@ from specimen import Phalanx
 from constants import GeneDesc, Limits
 
 
-class Cross:
+class CrossMutate:
     '''
-    Crosses two two specimen parents.
+    Crosses and mutates two two specimen parents.
     It takes phalanx genomes and corresponding convolution matrices from
     two parents and returns a child genome encoding of fingers and brain.
     It performs a Biased Uniform Crossing where fitter phalanges are
@@ -18,7 +18,7 @@ class Cross:
     '''
 
     @staticmethod
-    def __get_genome_mask(
+    def get_genome_mask(
         fitness_map_1: np.ndarray, fitness_map_2: np.ndarray
     ) -> np.ndarray[np.bool_]:
         '''Returns a boolean map array by comparing two fitness maps.
@@ -64,7 +64,7 @@ class Cross:
         return child_genome
 
     @staticmethod
-    def cross_genomes(
+    def cross_mutate_genomes(
         f_g_parent_1: np.ndarray,
         b_g_parent_1: np.ndarray,
         fit_parent_1: np.ndarray,
@@ -90,7 +90,7 @@ class Cross:
         f_g_child = np.zeros(f_g_parent_1.shape)  # fingers genome
         b_g_child = np.zeros(b_g_parent_1.shape)  # brain genome
 
-        fitness_mask = Cross.__get_genome_mask(fit_parent_1, fit_parent_2)
+        fitness_mask = CrossMutate.get_genome_mask(fit_parent_1, fit_parent_2)
 
         # Cross fingers genome
         # First take fittest phalanges from parent 1
@@ -100,7 +100,15 @@ class Cross:
         f_g_child[np.invert(fitness_mask)] = f_g_parent_2[np.invert(fitness_mask)]
         b_g_child[np.invert(fitness_mask)] = b_g_parent_2[np.invert(fitness_mask)]
 
-        f_g_child = Cross.__shorten_child(f_g_parent_1, f_g_parent_2, f_g_child)
+        # Set fitness map for child to use for mutation
+        fit_child = np.zeros(fit_parent_1.shape)
+        fit_child[fitness_mask] = fit_parent_1[fitness_mask]
+        fit_child[np.invert(fitness_mask)] = fit_parent_2[np.invert(fitness_mask)]
+
+        f_g_child, b_g_child = Mutate.mutate(f_g_child, b_g_child, fit_child)
+
+        # Fit the number of child phalanges between the parents
+        f_g_child = CrossMutate.__shorten_child(f_g_parent_1, f_g_parent_2, f_g_child)
 
         return f_g_child, b_g_child
 
@@ -110,43 +118,95 @@ class Mutate:
 
     @staticmethod
     def mutate(
-        finger_genome: np.ndarray,
-        brain_genome: np.ndarray,
-        f_amount: float,
-        b_amount: float,
-        f_rate: float = np.random.uniform(),
-        b_rate: float = np.random.uniform(),
-    ):
+        finger_genome: np.ndarray, brain_genome: np.ndarray, fit_map: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
         '''
-        Mutates supplied fingers and brain genomes by specified amount and given rate
+        Mutates supplied fingers and brain genomes by depending on their fitness
 
         Args:
             finger_genome: fingers genome encoding
             brain_genome: brain genome encoding
-            f_amount: amount to mutate fingers genome by
-            b_amount: amount to mutate brain genome by
-            f_rate: rate to mutate fingers genome by
-            b_rate: rate to mutate brain genome by
+            fit_map: child fitness map
         '''
 
-        assert isinstance(finger_genome, np.ndarray) and isinstance(
-            brain_genome, np.ndarray
-        )
+        # Finger genome mutation amount
+        f_mut_amount = 0.05 / ((1 + np.average(fit_map)) ** 2)
+        f_mut_amount = random.choice([-f_mut_amount, f_mut_amount])
 
         # Mutate fingers genome
         # Source: https://numpy.org/doc/stable/reference/arrays.nditer.html#modifying-array-values
         with np.nditer(finger_genome, op_flags=['readwrite']) as it:
             for encoding in it:
-                if np.random.uniform() < f_rate and encoding != 0:
+                if np.random.uniform() < 0.3 and encoding != 0:
                     # For finger genome, the values shouldn't be out of the bounds 0.01 and 1
-                    if encoding + f_amount < 0.01 or encoding + f_amount > 1:
+                    if encoding + f_mut_amount < 0.01 or encoding + f_mut_amount > 1:
                         continue
-                    encoding += f_amount
+                    encoding += f_mut_amount
 
         # Mutate brain genome
-        with np.nditer(brain_genome, op_flags=['readwrite']) as it:
-            for encoding in it:
-                if np.random.uniform() < b_rate and encoding != 0:
-                    encoding += b_amount
+        with np.nditer(fit_map, flags=['multi_index'], op_flags=['readwrite']) as it:
+            i = it.multi_index
+            # Brain genome mutation amount
+            g_mut_amount = 0.5 / ((1 + fit_map[i]) ** 2)
+            g_mut_amount = random.choice([-g_mut_amount, g_mut_amount])
+
+            brain_genome[i] += g_mut_amount
 
         return finger_genome, brain_genome
+
+    # @staticmethod
+    # def mutate(
+    #     finger_genome: np.ndarray,
+    #     brain_genome: np.ndarray,
+    #     f_amount: float,
+    #     b_amount: float,
+    #     f_rate: float = np.random.uniform(),
+    #     b_rate: float = np.random.uniform(),
+    # ):
+    #     '''
+    #     Mutates supplied fingers and brain genomes by specified amount and given rate
+
+    #     Args:
+    #         finger_genome: fingers genome encoding
+    #         brain_genome: brain genome encoding
+    #         f_amount: amount to mutate fingers genome by
+    #         b_amount: amount to mutate brain genome by
+    #         f_rate: rate to mutate fingers genome by
+    #         b_rate: rate to mutate brain genome by
+    #     '''
+
+    #     assert isinstance(finger_genome, np.ndarray) and isinstance(
+    #         brain_genome, np.ndarray
+    #     )
+
+    #     # Mutate fingers genome
+    #     # Source: https://numpy.org/doc/stable/reference/arrays.nditer.html#modifying-array-values
+    #     with np.nditer(finger_genome, op_flags=['readwrite']) as it:
+    #         for encoding in it:
+    #             if np.random.uniform() < f_rate and encoding != 0:
+    #                 # For finger genome, the values shouldn't be out of the bounds 0.01 and 1
+    #                 if encoding + f_amount < 0.01 or encoding + f_amount > 1:
+    #                     continue
+    #                 encoding += f_amount
+
+    #     # Mutate brain genome
+    #     with np.nditer(brain_genome, op_flags=['readwrite']) as it:
+    #         for encoding in it:
+    #             if np.random.uniform() < b_rate and encoding != 0:
+    #                 encoding += b_amount
+
+    #     return finger_genome, brain_genome
+
+    #     # The more fit the parents, the less we want to mutate the child
+    #     avg_fitness = (parent_1.fitness + parent_2.fitness) / 2
+
+    #     # Mutation factor
+    #     mut_factor = 1 / ((1 + avg_fitness) ** 2)
+
+    #     # Finger genome mutation amount
+    #     f_mut_amount = 0.05 / ((1 + avg_fitness) ** 2)
+    #     f_mut_amount = np.random.uniform(-f_mut_amount, f_mut_amount)
+
+    #     # Brain genome mutation amount
+    #     g_mut_amount = 0.1 / ((1 + avg_fitness) ** 2)
+    #     g_mut_amount = np.random.uniform(-g_mut_amount, g_mut_amount)

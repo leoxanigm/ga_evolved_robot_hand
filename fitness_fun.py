@@ -83,4 +83,7 @@ class FitnessFunction:
             fitness_map[f_i, j_i] = FitnessFunction.get_phalanx_fitness(
                 phalanx.get_performance()
             )
+        print('#######################################')
+        print(fitness_map)
+        print('#######################################')
         return fitness_map

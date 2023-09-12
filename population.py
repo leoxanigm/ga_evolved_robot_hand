@@ -5,7 +5,7 @@ import random
 
 from specimen import Specimen
 from fitness_fun import FitnessFunction
-from cross_mutate import Cross, Mutate
+from cross_mutate import CrossMutate
 
 from constants import GeneDesc, ROBOT_HAND
 
@@ -62,7 +62,7 @@ class Population:
             )
 
             # Cross the parents to create new child
-            f_g_child, b_g_child = Cross.cross_genomes(
+            f_g_child, b_g_child = CrossMutate.cross_mutate_genomes(
                 parent_1.fingers,
                 parent_1.brain.genome,
                 fit_map_p_1,
@@ -71,29 +71,15 @@ class Population:
                 fit_map_p_2,
             )
 
-            # The more fit the parents, the less we want to mutate the child
-            avg_fitness = (parent_1.fitness + parent_2.fitness) / 2
-
-            # Mutation factor
-            mut_factor = 1 / ((1 + avg_fitness) ** 2)
-
-            # Finger genome mutation amount
-            f_mut_amount = 0.05 / ((1 + avg_fitness) ** 2)
-            f_mut_amount = np.random.uniform(-f_mut_amount, f_mut_amount)
-            
-            # Brain genome mutation amount
-            g_mut_amount = 0.1 / ((1 + avg_fitness) ** 2)
-            g_mut_amount = np.random.uniform(-g_mut_amount, g_mut_amount)
-
             # Mutate the child's genomes
-            f_g_child, b_g_child = Mutate.mutate(
-                f_g_child,
-                b_g_child,
-                f_mut_amount,
-                g_mut_amount,
-                mut_factor,
-                mut_factor,
-            )
+            # f_g_child, b_g_child = Mutate.mutate(
+            #     f_g_child,
+            #     b_g_child,
+            #     f_mut_amount,
+            #     g_mut_amount,
+            #     mut_factor,
+            #     mut_factor,
+            # )
 
             child = Specimen(fingers_genome=f_g_child, brain_genome=b_g_child)
 
