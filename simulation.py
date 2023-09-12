@@ -2,6 +2,7 @@ import os
 import pybullet as p
 import numpy as np
 from multiprocessing import Pool
+from multiprocessing.context import TimeoutError as TE
 import time
 
 from typing import Literal
@@ -30,16 +31,16 @@ class Simulation:
         elif conn_method == 'GUI':
             self.p_id = p.connect(p.GUI)
             p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0, physicsClientId=self.p_id)
-            # p.resetDebugVisualizerCamera(
-            #     5, 0, 200, [0, -3, -0.5], physicsClientId=self.p_id
-            # )
             p.resetDebugVisualizerCamera(
-                3.26,
-                -74.8,
-                197.2,
-                (-1.58, -0.46, -0.13),
-                physicsClientId=self.p_id,
+                5, 0, 200, [0, -3, -0.5], physicsClientId=self.p_id
             )
+            # p.resetDebugVisualizerCamera(
+            #     3.26,
+            #     -74.8,
+            #     197.2,
+            #     (-1.58, -0.46, -0.13),
+            #     physicsClientId=self.p_id,
+            # )
 
         p.resetSimulation(physicsClientId=self.p_id)
 
@@ -198,10 +199,17 @@ class Simulation:
     def run_specimen(self, specimen: Specimen, in_training=True):
         # Load specimen
         if in_training:
-            urdf_file = f'intraining_specimen/{specimen.specimen_URDF}'
-            self.robot = p.loadURDF(
-                urdf_file, useFixedBase=1, physicsClientId=self.p_id
-            )
+            try:
+                urdf_file = f'intraining_specimen/{specimen.specimen_URDF}'
+                self.robot = p.loadURDF(
+                    urdf_file, useFixedBase=1, physicsClientId=self.p_id
+                )
+            except:
+                specimen.write_training_urdf()
+                urdf_file = f'intraining_specimen/{specimen.specimen_URDF}'
+                self.robot = p.loadURDF(
+                    urdf_file, useFixedBase=1, physicsClientId=self.p_id
+                )
         else:
             urdf_file = f'fit_specimen/urdf_files/{specimen.specimen_URDF}'
             self.robot = p.loadURDF(
@@ -325,7 +333,7 @@ class ThreadedSim:
                 if i >= len_specimen:  # reached the end
                     break
 
-                curr_pool_args.append([population.specimen[i]])
+                curr_pool_args.append((population.specimen[i], ))
 
             pool_args.append(curr_pool_args)
 
@@ -335,12 +343,31 @@ class ThreadedSim:
 
         for pool_argset in pool_args:
             with Pool(self.pool_size) as pool:
-                # https://docs.python.org/3/library/multiprocessing.html#multiprocessing.pool.Pool.starmap
-                evaluated_specimen = pool.starmap(
-                    ThreadedSim.static_run_specimen, pool_argset
-                )
+                # https://docs.python.org/3/library/multiprocessing.html#using-a-pool-of-workers
 
-                new_specimen.extend(evaluated_specimen)
+                results = [
+                    pool.apply_async(ThreadedSim.static_run_specimen, args)
+                    for args in pool_argset
+                ]
+                for i, res in enumerate(results):
+                    try:
+                        # Only evaluate a specimen for max 20 seconds
+                        evaluated_specimen = res.get(timeout=20)
+                        new_specimen.append(evaluated_specimen)
+                    except TE: # TimeoutError
+                        # Set the specimen's fitness to zero
+                        # We don't remove the specimen now, as we want the size of population
+                        # to stay consistent
+                        failed_specimen = pool_argset[i][0]
+                        failed_specimen.fitness = 0
+                        new_specimen.append(failed_specimen)
+                        pass
+
+                # evaluated_specimen = pool.starmap(
+                #     ThreadedSim.static_run_specimen, pool_argset
+                # )
+
+                # new_specimen.extend(evaluated_specimen)
 
         # update the population
         population.specimen = new_specimen

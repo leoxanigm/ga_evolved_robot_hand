@@ -42,7 +42,7 @@ try:
         start_time = time.time()
 
         population = Population(population_count)
-        simulation = ThreadedSim()
+        simulation = ThreadedSim(pool_size=10)
 
         for i in range(generation_count):
             print('==============')
