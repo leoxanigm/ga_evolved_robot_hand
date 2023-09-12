@@ -5,7 +5,7 @@ import random
 
 from specimen import Specimen
 from fitness_fun import FitnessFunction
-from cross_mutate import CrossMutate
+from cross_mutate import CrossMutate, Mutate
 
 from constants import GeneDesc, ROBOT_HAND
 
@@ -61,7 +61,7 @@ class Population:
                 parent_2.phalanges, parent_2.fingers.shape
             )
 
-            # Cross the parents to create new child
+            # Cross the parents to create a new child
             f_g_child, b_g_child = CrossMutate.cross_mutate_genomes(
                 parent_1.fingers,
                 parent_1.brain.genome,
@@ -71,23 +71,26 @@ class Population:
                 fit_map_p_2,
             )
 
-            # Mutate the child's genomes
-            # f_g_child, b_g_child = Mutate.mutate(
-            #     f_g_child,
-            #     b_g_child,
-            #     f_mut_amount,
-            #     g_mut_amount,
-            #     mut_factor,
-            #     mut_factor,
-            # )
+            # Mutate parents
+            parent_1_f_g_mut, parent_1_b_g_mut = Mutate.mutate(
+                parent_1.fingers, parent_1.brain.genome, fit_map_p_1
+            )
+            parent_2_f_g_mut, parent_2_b_g_mut = Mutate.mutate(
+                parent_2.fingers, parent_2.brain.genome, fit_map_p_2
+            )
 
+            mut_parent_1 = Specimen(
+                fingers_genome=parent_1_f_g_mut, brain_genome=parent_1_b_g_mut
+            )
+            mut_parent_2 = Specimen(
+                fingers_genome=parent_2_f_g_mut, brain_genome=parent_2_b_g_mut
+            )
             child = Specimen(fingers_genome=f_g_child, brain_genome=b_g_child)
 
-            children.append(child)
+            children.extend([mut_parent_1, mut_parent_2, child])
 
         # New generation will have fit parents and their children
-        self._specimen.extend(self.fits)
-        self._specimen.extend(children)
+        self._specimen = children
 
         self.crossed = True
         self.mutated = True

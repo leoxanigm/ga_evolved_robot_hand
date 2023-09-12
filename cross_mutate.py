@@ -130,7 +130,7 @@ class Mutate:
         '''
 
         # Finger genome mutation amount
-        f_mut_amount = 0.05 / ((1 + np.average(fit_map)) ** 2)
+        f_mut_amount = 0.01 / ((1 + np.average(fit_map)) ** 2)
         f_mut_amount = random.choice([-f_mut_amount, f_mut_amount])
 
         # Mutate fingers genome
@@ -145,68 +145,13 @@ class Mutate:
 
         # Mutate brain genome
         with np.nditer(fit_map, flags=['multi_index'], op_flags=['readwrite']) as it:
-            i = it.multi_index
-            # Brain genome mutation amount
-            g_mut_amount = 0.5 / ((1 + fit_map[i]) ** 2)
-            g_mut_amount = random.choice([-g_mut_amount, g_mut_amount])
+            for f_m in it:
+                if f_m > 0:
+                    i = it.multi_index
+                    # Brain genome mutation amount
+                    g_mut_amount = 0.5 / ((1 + f_m) ** 2)
+                    g_mut_amount = random.choice([-g_mut_amount, g_mut_amount])
 
-            brain_genome[i] += g_mut_amount
+                    brain_genome[i] += g_mut_amount
 
         return finger_genome, brain_genome
-
-    # @staticmethod
-    # def mutate(
-    #     finger_genome: np.ndarray,
-    #     brain_genome: np.ndarray,
-    #     f_amount: float,
-    #     b_amount: float,
-    #     f_rate: float = np.random.uniform(),
-    #     b_rate: float = np.random.uniform(),
-    # ):
-    #     '''
-    #     Mutates supplied fingers and brain genomes by specified amount and given rate
-
-    #     Args:
-    #         finger_genome: fingers genome encoding
-    #         brain_genome: brain genome encoding
-    #         f_amount: amount to mutate fingers genome by
-    #         b_amount: amount to mutate brain genome by
-    #         f_rate: rate to mutate fingers genome by
-    #         b_rate: rate to mutate brain genome by
-    #     '''
-
-    #     assert isinstance(finger_genome, np.ndarray) and isinstance(
-    #         brain_genome, np.ndarray
-    #     )
-
-    #     # Mutate fingers genome
-    #     # Source: https://numpy.org/doc/stable/reference/arrays.nditer.html#modifying-array-values
-    #     with np.nditer(finger_genome, op_flags=['readwrite']) as it:
-    #         for encoding in it:
-    #             if np.random.uniform() < f_rate and encoding != 0:
-    #                 # For finger genome, the values shouldn't be out of the bounds 0.01 and 1
-    #                 if encoding + f_amount < 0.01 or encoding + f_amount > 1:
-    #                     continue
-    #                 encoding += f_amount
-
-    #     # Mutate brain genome
-    #     with np.nditer(brain_genome, op_flags=['readwrite']) as it:
-    #         for encoding in it:
-    #             if np.random.uniform() < b_rate and encoding != 0:
-    #                 encoding += b_amount
-
-    #     return finger_genome, brain_genome
-
-    #     # The more fit the parents, the less we want to mutate the child
-    #     avg_fitness = (parent_1.fitness + parent_2.fitness) / 2
-
-    #     # Mutation factor
-    #     mut_factor = 1 / ((1 + avg_fitness) ** 2)
-
-    #     # Finger genome mutation amount
-    #     f_mut_amount = 0.05 / ((1 + avg_fitness) ** 2)
-    #     f_mut_amount = np.random.uniform(-f_mut_amount, f_mut_amount)
-
-    #     # Brain genome mutation amount
-    #     g_mut_amount = 0.1 / ((1 + avg_fitness) ** 2)
-    #     g_mut_amount = np.random.uniform(-g_mut_amount, g_mut_amount)
