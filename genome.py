@@ -62,3 +62,41 @@ class BrainGenome:
         size = (*shape[:2], *shape[:2], num_inputs)
 
         return np.random.uniform(low=-0.5, high=0.5, size=size)
+
+# ToDo
+# Look into encoding the genome so it looks like below
+# It gives an output of signed binary
+# Maybe use something like np.sign(np.sum(g, axis=(2, 3, 4)))
+
+# a = array([[[0, 1],
+#          [1, 1]],
+ 
+#         [[0, 0],
+#          [1, 1]]]),
+# g = array([[[[[-1, -1],
+#            [ 0, -1]],
+ 
+#           [[ 1,  0],
+#            [ 0, -1]]],
+ 
+ 
+#          [[[ 1,  0],
+#            [ 0, -1]],
+ 
+#           [[-1,  0],
+#            [ 0, -1]]]],
+ 
+ 
+ 
+#         [[[[-1,  0],
+#            [ 0, -1]],
+ 
+#           [[ 1, -1],
+#            [ 1, -1]]],
+ 
+ 
+#          [[[ 1,  1],
+#            [ 1,  0]],
+ 
+#           [[ 1, -1],
+#            [ 0,  1]]]]]))

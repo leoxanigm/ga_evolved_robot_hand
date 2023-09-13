@@ -7,10 +7,10 @@ from constants import GeneDesc
 
 
 # saved_specimen = [('e76a7090', '93889a26')]  # Table joint has to be prismatic
-saved_specimen = [('154173b4', 'a7d5c5f4')]
-# saved_specimen = sorted(
-#     [(path[0:8], path[9:17]) for path in os.listdir('fit_specimen/urdf_files/')]
-# )
+# saved_specimen = [('154173b4', 'a7d5c5f4')]
+saved_specimen = sorted(
+    [(path[0:8], path[9:17]) for path in os.listdir('fit_specimen/urdf_files/')]
+)
 
 
 for curr_spe in saved_specimen:

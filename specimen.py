@@ -138,6 +138,11 @@ class Specimen:
         specimen_id: str = None,
     ):
         if generation_id and specimen_id:
+            # ToDo
+            # Convert load_genome to helper function that returns genome
+            #
+
+
             # Load fingers from saved pickle dump
             self.fingers_phenome = FingersPhenome()
             self.fingers = self.fingers_phenome.load_genome(
@@ -157,22 +162,18 @@ class Specimen:
             return
 
         if fingers_genome is not None and brain_genome is not None:
-            self.fingers_phenome = FingersPhenome(fingers_genome)
-            self.fingers = self.fingers_phenome.phenome
+            self._fingers_genome = fingers_genome
+            self._brain_genome = brain_genome
         else:
             # Initialize random fingers genome
-            fingers_genome = FingersGenome.genome(self.gene_desc)
-
-            self.fingers_phenome = FingersPhenome(fingers_genome)
-            self.fingers = self.fingers_phenome.phenome
-
+            self._fingers_genome = FingersGenome.genome(self.gene_desc)
             # Initialize random brain genome
-            brain_genome = BrainGenome.genome(fingers_genome)
+            self._brain_genome = BrainGenome.genome(self._fingers_genome)
 
-        self._fingers_genome = self.fingers_phenome.genome
+        self.fingers_phenome = FingersPhenome(self._fingers_genome)
+        self.fingers = self.fingers_phenome.phenome
 
-        self.brain = BrainPhenome(brain_genome)
-        self._brain_genome = self.brain.genome
+        self.brain = BrainPhenome(self._brain_genome)
 
         self.write_training_urdf()
 
@@ -194,7 +195,7 @@ class Specimen:
         if urdf_written:
             self.specimen_URDF = output_file
         else:
-            raise Exception('Can not initialize robot fingers')
+            raise RuntimeError('Can not initialize robot fingers')
 
     def load_state(self, genome_link_indices: list[tuple]):
         '''Loads genome indices (fingers and phalanges) and link indices to
