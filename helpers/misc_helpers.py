@@ -55,17 +55,17 @@ def write_csv(file_path: str, data_row: list[float]):
         return False
 
 
-def clear_training_dir(dir_path=TRAINING_DIR):
+def clear_dir(dir_path=TRAINING_DIR):
     '''
-    Deletes all URDF files created during evaluation
+    Deletes all files in the path specified. Helps to clear training and test files.
     Source: https://www.tutorialspoint.com/How-to-delete-all-files-in-a-directory-with-Python
 
     Args:
-        dir_path (str): training directory. Defaults to path specified in constants.py
+        dir_path (str): directory. Defaults to training path specified in constants.py
     '''
 
-    training_urdf_files = os.listdir(dir_path)
-    for urdf_file in training_urdf_files:
-        file_path = os.path.join(dir_path, urdf_file)
+    files = os.listdir(dir_path)
+    for file in files:
+        file_path = os.path.join(dir_path, file)
         if os.path.isfile(file_path):
             os.remove(file_path)

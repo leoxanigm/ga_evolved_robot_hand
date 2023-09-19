@@ -1,32 +1,31 @@
+import os
 import numpy as np
+import pickle
+
+import constants as c
 
 
 class FingersGenome:
     @staticmethod
-    def genome(gene_description, rows=7, columns=10):
+    def random_genome() -> np.ndarray:
         '''
-        Returns random fingers genome matrix
-
-        Args:
-            gene_description (Enum): attributes for a typical phalanx. Defined
-                in the constants.py file
-            rows: maximum number of fingers
-            columns: maximum number of phalanges
+        Returns random fingers genome matrix based on maximum number of
+        fingers, maximum number of phalanges and length of gene description
         '''
 
-        max_fingers, max_phalanges = rows, columns
-        
-        # A random matrix with num of max fingers and phalanges
-        gene_len = len(gene_description)
+        max_fingers, max_phalanges = c.MAX_NUM_FINGERS, c.MAX_NUM_PHALANGES
+        gene_len = len(c.GeneDesc)
+
         genome_matrix = np.random.uniform(
             low=0.01, high=1, size=(max_fingers, max_phalanges, gene_len)
         )
 
-        # Random number of fingers between 2 and max_fingers
+        # Generate random number of fingers, done by setting array values to
+        # zero after a random index
         fingers = np.random.randint(2, max_fingers)
         genome_matrix[fingers:] = 0
 
-        # Random number of phalanges for each finger
+        # Generate random number of phalanges for each finger
         for f in range(max_fingers):
             p = np.random.randint(2, max_phalanges)
             genome_matrix[f, p:] = 0
@@ -36,25 +35,19 @@ class FingersGenome:
 
 class BrainGenome:
     @staticmethod
-    def genome(genome_matrix, num_inputs=3) -> np.ndarray:
+    def random_genome() -> np.ndarray:
         '''
         Genetic coding for the brain.
-        The shape of the matrix is decided by the shape of genome_matrix.
-
-        The brain decides the rotation direction of a phalanx: either +ve,
-        -ve or no rotation. It takes a tuple of binary inputs for each phalanx
-        that have structure (distance [1/0], collision with target [1/0]) and
-        (collision with obstacle [1/0]). It multiples the inputs for all
-        phalanges with a convolution matrix of a phalanx and outputs rotation
-        direction for the said phalanx.
-
-        Args:
-            genome_matrix: genome encoding for the fingers
-            num_inputs: number of inputs
+        The shape of the matrix is decided by the maximum number of fingers,
+        maximum number of phalanges a specimen would have and the length
+        of gene description.
         '''
-        assert isinstance(genome_matrix, np.ndarray)
 
-        shape = genome_matrix.shape
+        max_fingers, max_phalanges = c.MAX_NUM_FINGERS, c.MAX_NUM_PHALANGES
+        gene_len = len(c.GeneDesc)
+
+        shape = max_fingers, max_phalanges, gene_len
+        num_inputs = c.NUMBER_OF_INPUTS
 
         # Take number of finger and phalanges. Size of weight array equals
         # number of inputs. For example: for a brain genome with shape (7, 10, 9),
@@ -63,6 +56,35 @@ class BrainGenome:
 
         return np.random.uniform(low=-0.5, high=0.5, size=size)
 
+
+def save_genome(genome: np.ndarray, file_path: str) -> None:
+    '''Saves genome encoding to disk'''
+
+    assert isinstance(genome, np.ndarray)
+
+    full_path = os.path.join(os.getcwd(), file_path)
+
+    try:
+        with open(full_path, 'wb') as f:
+            pickle.dump(genome, f)
+    except FileNotFoundError:
+        raise FileNotFoundError('Make sure the folder exists before loading the genome')
+
+
+def load_genome(file_path: str) -> np.ndarray:
+    '''Loads saved genome encoding from disk'''
+
+    full_path = os.path.join(os.getcwd(), file_path)
+
+    if not os.path.exists(full_path):
+        raise FileNotFoundError('Could not load genome from the specified path')
+
+    with open(full_path, 'rb') as f:
+        genome = pickle.load(f)
+
+    return genome
+
+
 # ToDo
 # Look into encoding the genome so it looks like below
 # It gives an output of signed binary
@@ -70,33 +92,32 @@ class BrainGenome:
 
 # a = array([[[0, 1],
 #          [1, 1]],
- 
+
 #         [[0, 0],
 #          [1, 1]]]),
 # g = array([[[[[-1, -1],
 #            [ 0, -1]],
- 
+
 #           [[ 1,  0],
 #            [ 0, -1]]],
- 
- 
+
+
 #          [[[ 1,  0],
 #            [ 0, -1]],
- 
+
 #           [[-1,  0],
 #            [ 0, -1]]]],
- 
- 
- 
+
+
 #         [[[[-1,  0],
 #            [ 0, -1]],
- 
+
 #           [[ 1, -1],
 #            [ 1, -1]]],
- 
- 
+
+
 #          [[[ 1,  1],
 #            [ 1,  0]],
- 
+
 #           [[ 1, -1],
 #            [ 0,  1]]]]]))

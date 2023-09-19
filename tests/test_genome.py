@@ -1,34 +1,68 @@
+import os
 import unittest
 import hypothesis.strategies as st
 from hypothesis import given
 import numpy as np
 
-from genome import FingersGenome, BrainGenome
-from constants import GeneDesc
+from genome import FingersGenome, BrainGenome, save_genome, load_genome
+import constants as c
+from helpers.misc_helpers import clear_dir
 
 
-class FingersGenomeTest(unittest.TestCase):
-    @given(fingers=st.integers(3, 10), phalanges=st.integers(3, 20))
-    def test_random_genome_matrix(self, fingers, phalanges):
-        fingers_genome = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
+class TestFingersGenome(unittest.TestCase):
+    def test_random_genome_matrix(self):
+        fingers_genome = FingersGenome.random_genome()
 
         assert isinstance(fingers_genome, np.ndarray)
-        assert fingers_genome.shape == (fingers, phalanges, len(GeneDesc))
-        assert np.all((fingers_genome >= 0) & (fingers_genome < 1))
+        assert fingers_genome.shape == (
+            c.MAX_NUM_FINGERS,
+            c.MAX_NUM_PHALANGES,
+            len(c.GeneDesc),
+        )
+        # Check there are random number of fingers
+        assert not np.all(fingers_genome > 0)
 
 
-class BrainGenomeTest(unittest.TestCase):
-    @given(
-        fingers=st.integers(3, 10),
-        phalanges=st.integers(3, 20),
-        num_inputs=st.integers(3, 7),
-    )
-    def test_convolution_matrix(self, fingers, phalanges, num_inputs):
-        fingers_genome = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
-        brain_genome = BrainGenome.genome(fingers_genome, num_inputs)
+class TestBrainGenome(unittest.TestCase):
+    def test_convolution_matrix(self):
+        brain_genome = BrainGenome.random_genome()
 
         assert isinstance(brain_genome, np.ndarray)
-        assert brain_genome.shape == (fingers, phalanges, fingers, phalanges, num_inputs)
+        assert brain_genome.shape == (
+            c.MAX_NUM_FINGERS,
+            c.MAX_NUM_PHALANGES,
+            c.MAX_NUM_FINGERS,
+            c.MAX_NUM_PHALANGES,
+            c.NUMBER_OF_INPUTS,
+        )
+
+
+class TestSaveLoadGenome(unittest.TestCase):
+    def tearDown(self):
+        clear_dir('tests/genome_files/')
+
+    def test_save_genome(self):
+        fingers_genome = FingersGenome.random_genome()
+        brain_genome = BrainGenome.random_genome()
+
+        save_genome(fingers_genome, 'tests/genome_files/f_g.pk')
+        save_genome(brain_genome, 'tests/genome_files/b_g.pk')
+
+        assert os.path.exists('tests/genome_files/f_g.pk')
+        assert os.path.exists('tests/genome_files/b_g.pk')
+
+    def test_load_genome(self):
+        fingers_genome = FingersGenome.random_genome()
+        brain_genome = BrainGenome.random_genome()
+
+        save_genome(fingers_genome, 'tests/genome_files/f_g_2.pk')
+        save_genome(brain_genome, 'tests/genome_files/b_g_2.pk')
+
+        load_fingers_genome = load_genome('tests/genome_files/f_g_2.pk')
+        load_brain_genome = load_genome('tests/genome_files/b_g_2.pk')
+
+        assert np.all(fingers_genome == load_fingers_genome)
+        assert np.all(brain_genome == load_brain_genome)
 
 
 if __name__ == '__main__':

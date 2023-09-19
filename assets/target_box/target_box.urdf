@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<robot name="target_box">
+
+  <link concave="yes" name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="target_box.stl" scale="0.5 0.5 0.5" />
+      </geometry>
+      <material name="dark-gray-3">
+        <color rgba="0.3 0.3 0.3 1.0" />
+      </material>
+    </visual>
+    <collision concave="yes">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="target_box.stl" scale="0.5 0.5 0.5" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.0" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001" />
+    </inertial>
+    <contact>
+      <lateral_friction value="1.0" />
+    </contact>
+  </link>
+</robot>

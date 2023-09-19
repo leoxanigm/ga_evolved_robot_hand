@@ -2,7 +2,7 @@ from typing import Union
 import math
 
 
-def calculate_box_mass(x, y, z, density=300):
+def calculate_box_mass(x, y, z, density=5):
     '''
     Calculates mass for the phalanges with rectangular shape
     Parameters:
