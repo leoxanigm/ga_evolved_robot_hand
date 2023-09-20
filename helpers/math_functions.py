@@ -5,7 +5,7 @@ import math
 def calculate_box_mass(x, y, z, density=5):
     '''
     Calculates mass for the phalanges with rectangular shape
-    Parameters:
+    Args:
         x, y, z: the size attributes
         density: light wood with density of 300kg/m3
                 source: https://www.britannica.com/science/wood-plant-tissue/Properties-of-wood
@@ -15,10 +15,28 @@ def calculate_box_mass(x, y, z, density=5):
     return round((x * y * z) * density, 3)
 
 
+def calculate_cylinder_mass(radius, length, density=2500):
+    '''
+    Calculates mass for the phalanges with cylinder tube
+    Args:
+        radius
+        length
+        density: aluminum tube
+                source: https://www.engineeringtoolbox.com/metal-alloys-densities-d_50.html
+    Returns:
+        volume * density
+
+    Formula source: https://www.engineeringtoolbox.com/pipe-weight-calculation-d_745.html
+    '''
+    inner_radius = radius - 0.005  # 5mm thick
+    mass = density * math.pi * ((radius**2) - inner_radius**2) * length / 4
+    return round(mass, 3)
+
+
 def moments_of_inertia_box(x, y, z, mass):
     '''
     Calculates moments of inertia for the phalanges with rectangular shape
-    Parameters:
+    Args:
         x, y, z: the size attributes
         mass: the mass of the shape
     Source: https://en.wikipedia.org/wiki/List_of_moments_of_inertia
@@ -28,6 +46,19 @@ def moments_of_inertia_box(x, y, z, mass):
     izz = (1 / 12) * mass * (x**2 + y**2)
 
     return round(ixx, 3), round(iyy, 3), round(izz, 3)
+
+
+def moments_of_inertia_cylinder(radius, mass):
+    '''
+    Calculates moments of inertia for the phalanges with cylinder shape
+    Args:
+        radius
+        mass: the mass of the shape
+    Source: https://en.wikipedia.org/wiki/List_of_moments_of_inertia
+    '''
+    I = mass * (radius**2)
+
+    return round(I, 3)
 
 
 def normalize(val, t_min, t_max, r_min=0, r_max=1):

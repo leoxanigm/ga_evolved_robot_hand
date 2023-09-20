@@ -2,6 +2,7 @@ import pybullet as p
 import numpy as np
 from typing import Literal
 
+import constants as c
 from specimen import Phalanx
 
 from helpers.pybullet_helpers import check_in_target_box
@@ -57,14 +58,12 @@ class FitnessFunction:
         assert len(phalanges) > 0
 
         grabbing_performances = [
-            FitnessFunction.get_phalanx_fitness(p.get_performance()) for p in phalanges
+            FitnessFunction.get_phalanx_fitness(phalanx.get_performance())
+            for phalanx in phalanges
         ]
         grabbing_performances = sum(grabbing_performances) / len(phalanges)
 
-        # Manually setting 4 here to normalize the fitness
-        # This is because we have three inputs and three target objects
-        # ToDo: move number of inputs and number of target object to config file
-        return (grabbing_performances + picking_performance) / 4
+        return (grabbing_performances + picking_performance) / (1 + c.NUMBER_OF_INPUTS)
 
     @staticmethod
     def get_fitness_map(phalanges: list[Phalanx], shape: tuple) -> np.ndarray:

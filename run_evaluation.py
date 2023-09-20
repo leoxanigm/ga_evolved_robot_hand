@@ -8,7 +8,7 @@ import time
 from population import Population
 from simulation import Simulation, ThreadedSim
 
-from helpers.misc_helpers import write_csv, clear_training_dir
+from helpers.misc_helpers import write_csv
 
 # Current time for the name of log file
 t = time.localtime()
@@ -24,20 +24,17 @@ write_csv(f'log/{t_log}_log.csv', ['iteration_id', 'total_run_time(s)', 'pop_cou
 written_files.append(f'log/{t_log}_log.csv')
 
 try:
-    for j in range(50):  # run 50 evaluations
-        generation_count = 50  # for 50 generations
+    for j in range(1):  # run 50 evaluations
+        generation_count = 10  # for 50 generations
         population_count = 100  # of 100 specimen each
 
         run_id = str(uuid4())[:8]
 
         write_csv(
             f'fit_specimen/{run_id}.csv',
-            ['generation_id', 'generation_index', 'top_fitness'],
+            ['generation_id', 'generation_index', 'top_fitness', 'saved_specimen'],
         )
         written_files.append(f'fit_specimen/{run_id}.csv')
-
-        # clean training directory
-        # clear_training_dir()
 
         start_time = time.time()
 
@@ -62,19 +59,17 @@ try:
             fittest = population.fittest
 
             # Save the fittest specimen of this generation
+            saved_specimen_id = ''
             if fittest[0].f > 0.8:
-                fittest[0].s.save_specimen(generation_id)
+                saved_specimen_id = fittest[0].s.save_specimen()
 
             print(f'Max fitness for generation {i} = {fittest[0].f}')
 
             # Write log for this generation
             write_csv(
                 f'fit_specimen/{run_id}.csv',
-                [generation_id, i, fittest[0].f],
+                [generation_id, i, fittest[0].f, saved_specimen_id],
             )
-
-        # clean training directory
-        # clear_training_dir()
 
         # Write log for current iteration
         write_csv(
@@ -87,14 +82,12 @@ try:
         )
 
     run_success = True
+
 except Exception as e:
     # Clear log files
     if not run_success:
         for file_path in written_files:
             if os.path.isfile(file_path):
                 os.remove(file_path)
-
-    # clean training directory
-    # clear_training_dir()
 
     raise e

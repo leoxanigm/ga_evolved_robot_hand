@@ -4,10 +4,8 @@ import pickle
 from copy import deepcopy
 
 import constants as c
-from constants import GeneDesc, Limits, ROBOT_HAND
-from genome import BrainGenome, FingersGenome
+from constants import GeneDesc, Limits
 from helpers.math_functions import normalize
-from helpers.misc_helpers import get_robot_palm_dims
 
 
 class FingersPhenome:
@@ -25,9 +23,39 @@ class FingersPhenome:
 
         phenome_matrix = deepcopy(finger_genome)
 
-        dimensions = get_robot_palm_dims(ROBOT_HAND)
-        palm_dim_x = dimensions['x'] / 2
-        palm_dim_y = dimensions['y'] / 2
+        num_pos = 8
+
+        # Generate finger position angles from 0 to 315 in radians
+        angles = []
+        start = 0
+        for _ in range(num_pos):
+            angles.append(start)
+            start += np.pi / 4
+
+        # Convert the angles to x and y positions
+        joint_origins = []
+        for a in angles:
+            # 0.5 is the radius of the palm
+            x = round(np.sin(a), 3) * 0.5
+            y = round(np.cos(a), 3) * 0.5
+            joint_origins.append((x, y))
+
+        # These joint rotation axis (x, y) correspond to position placement
+        # they make sure the fingers rotate to/away from the center
+        joint_axes = [
+            (-1, 0),
+            (-1, 1),
+            (0, 1),
+            (1, 1),
+            (1, 0),
+            (1, -1),
+            (0, -1),
+            (-1, -1),
+        ]
+
+        # Track which positions are taken so that we don't place two
+        # fingers at the same position
+        taken_indices = []
 
         for i in range(phenome_matrix.shape[0]):  # loop through fingers
             finger = phenome_matrix[i]
@@ -36,8 +64,20 @@ class FingersPhenome:
                 # No need to continue looping as the rest of array elements will be zero
                 break
 
-            parent_dim_z = dimensions['z']  # height of the palm link
+            joint_orig_z = 0
             parent_axes = None
+
+            finger_axis = int(finger[0, GeneDesc.JOINT_AXIS_X] * num_pos)
+
+            # finger_axis is already taken, search for next empty position
+            # while making sure we don't get IndexError
+            while finger_axis in taken_indices:
+                finger_axis = (finger_axis + 1) % num_pos
+
+            taken_indices.append(finger_axis)
+
+            x_axis, y_axis = joint_axes[finger_axis]
+            joint_orig_x, joint_orig_y = joint_origins[finger_axis]
 
             for j in range(phenome_matrix.shape[1]):  # loop through phalanges
                 phalanx = phenome_matrix[i][j]
@@ -51,15 +91,13 @@ class FingersPhenome:
                 FingersPhenome.__set_link_dimensions(phalanx)
 
                 # Modify joint origin
-                new_parent_dim_z = FingersPhenome.__set_joint_origin(
-                    phalanx, palm_dim_x, palm_dim_y, parent_dim_z, j
+                new_joint_orig_z = FingersPhenome.__set_joint_origin(
+                    phalanx, joint_orig_x, joint_orig_y, joint_orig_z, j
                 )
-                parent_dim_z = new_parent_dim_z
+                joint_orig_z = new_joint_orig_z
 
                 # Modify joint axis
-                parent_axes = FingersPhenome.__set_joint_axis(
-                    phalanx, palm_dim_x, palm_dim_y, parent_axes
-                )
+                parent_axes = FingersPhenome.__set_joint_axis(phalanx, x_axis, y_axis)
 
         return phenome_matrix
 
@@ -70,18 +108,15 @@ class FingersPhenome:
         Takes the values from predefined constants.
         '''
 
-        phalanx[GeneDesc.DIM_X] = normalize(
-            phalanx[GeneDesc.DIM_X], Limits.DIM_X_LOWER, Limits.DIM_X_UPPER
+        phalanx[GeneDesc.RADIUS] = normalize(
+            phalanx[GeneDesc.RADIUS], Limits.RADIUS_LOWER, Limits.RADIUS_UPPER
         )
-        phalanx[GeneDesc.DIM_Y] = normalize(
-            phalanx[GeneDesc.DIM_Y], Limits.DIM_Y_LOWER, Limits.DIM_Y_UPPER
-        )
-        phalanx[GeneDesc.DIM_Z] = normalize(
-            phalanx[GeneDesc.DIM_Z], Limits.DIM_Z_LOWER, Limits.DIM_Z_UPPER
+        phalanx[GeneDesc.LENGTH] = normalize(
+            phalanx[GeneDesc.LENGTH], Limits.LENGTH_LOWER, Limits.LENGTH_UPPER
         )
 
     @staticmethod
-    def __set_joint_origin(phalanx, palm_dim_x, palm_dim_y, parent_dim_z, index):
+    def __set_joint_origin(phalanx, joint_orig_x, joint_orig_y, joint_orig_z, index):
         '''
         Places links at the edge of their respective parents by setting their
         joint origin to their parents' lengths.
@@ -91,29 +126,8 @@ class FingersPhenome:
         '''
 
         if index == 0:
-            # Limit the range of joint origin x and y to the area of the palm
-            phalanx_dim_x = normalize(
-                phalanx[GeneDesc.JOINT_ORIGIN_X], -palm_dim_x, palm_dim_x
-            )
-            phalanx_dim_y = normalize(
-                phalanx[GeneDesc.JOINT_ORIGIN_Y], -palm_dim_y, palm_dim_y
-            )
-
-            # Get sign of  location to get its quadrant
-            x_quadrant = np.sign(phalanx_dim_x)
-            y_quadrant = np.sign(phalanx_dim_y)
-
-            # Get intersection point between palm edges and the  point in the
-            # palm. This moves the finger attachments to the edges while
-            # maintaining ness and order. The ness is chosen by
-            # the value of joint origin in z axis. So for the same genome encoding,
-            # we get the same attachment point each time.
-            if phalanx[GeneDesc.JOINT_ORIGIN_Z] < 0.5:
-                phalanx[GeneDesc.JOINT_ORIGIN_X] = phalanx_dim_x
-                phalanx[GeneDesc.JOINT_ORIGIN_Y] = palm_dim_y * y_quadrant
-            else:
-                phalanx[GeneDesc.JOINT_ORIGIN_X] = palm_dim_x * x_quadrant
-                phalanx[GeneDesc.JOINT_ORIGIN_Y] = phalanx_dim_y
+            phalanx[GeneDesc.JOINT_ORIGIN_X] = joint_orig_x
+            phalanx[GeneDesc.JOINT_ORIGIN_Y] = joint_orig_y
 
         else:
             # Other phalanges are attached to the center of their parent phalanx
@@ -121,30 +135,14 @@ class FingersPhenome:
             phalanx[GeneDesc.JOINT_ORIGIN_Y] = 0
 
         # Attach link at the end of parent phalanx
-        phalanx[GeneDesc.JOINT_ORIGIN_Z] = parent_dim_z
+        phalanx[GeneDesc.JOINT_ORIGIN_Z] = -joint_orig_z
 
-        return phalanx[GeneDesc.DIM_Z]
+        return phalanx[GeneDesc.LENGTH]
 
     @staticmethod
-    def __set_joint_axis(phalanx, palm_dim_x, palm_dim_y, parent_axes=None):
-        if parent_axes is None:
-            # The axis of rotation for the posterior phalanges should always
-            # face the center of the palm. This is to ensure the fingers can
-            # close and open
-
-            # Check which edge of palm the phalanx is located
-            if np.abs(phalanx[GeneDesc.JOINT_ORIGIN_X]) == np.abs(palm_dim_x):
-                edge_sign = np.sign(phalanx[GeneDesc.JOINT_ORIGIN_X])
-                phalanx[GeneDesc.JOINT_AXIS_X] = 0
-                phalanx[GeneDesc.JOINT_AXIS_Y] = edge_sign
-            else:
-                edge_sign = np.sign(phalanx[GeneDesc.JOINT_ORIGIN_Y])
-                phalanx[GeneDesc.JOINT_AXIS_X] = -1 * edge_sign
-                phalanx[GeneDesc.JOINT_AXIS_Y] = 0
-        else:
-            # For the rest of the phalanges, set the axis of rotation same
-            # as the posterior phalanx
-            phalanx[GeneDesc.JOINT_AXIS_X], phalanx[GeneDesc.JOINT_AXIS_Y] = parent_axes
+    def __set_joint_axis(phalanx, x_axis, y_axis):
+        phalanx[GeneDesc.JOINT_AXIS_X] = x_axis
+        phalanx[GeneDesc.JOINT_AXIS_Y] = y_axis
 
         # For now we doesn't need the phalanges to revolve around the z axis
         phalanx[GeneDesc.JOINT_AXIS_Z] = 0
@@ -153,17 +151,15 @@ class FingersPhenome:
 
 
 class BrainPhenome:
-    def __init__(self, brain_genome: BrainGenome = None):
-        '''The brain decides the rotation direction of a phalanx: either +ve,
-        -ve or no rotation. It takes a tuple of binary inputs for each phalanx
-        that have structure (distance [1/0], collision with target [1/0]) and
-        (collision with obstacle [1/0]). It multiples the inputs for all
-        phalanges with a convolution matrix of a phalanx and outputs rotation
-        direction for the said phalanx.'''
+    '''The brain decides the rotation direction of a phalanx: either +ve,
+    -ve or no rotation. It takes a tuple of binary inputs for each phalanx
+    that have structure (distance [1/0], collision with target [1/0]) and
+    (collision with obstacle [1/0]). It multiples the inputs for all
+    phalanges with a convolution matrix of a phalanx and outputs rotation
+    direction for the said phalanx.'''
 
-        self.brain_genome = brain_genome
-
-    def trajectories(self, input: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def trajectories(brain_genome: np.ndarray, input: np.ndarray) -> np.ndarray:
         '''
         Performs convolution transform on a set of inputs based on convolution
         matrix genome encoding.
@@ -173,16 +169,11 @@ class BrainPhenome:
                 [distance (1/0), collision-target (1/0), collision-obstacle (1/0))]
         '''
 
-        if self.brain_genome is None:
-            raise RuntimeError(
-                'Brain genome must be loaded before calculating trajectories'
-            )
-
         assert isinstance(input, np.ndarray)
-        assert input.shape == self.brain_genome.shape[2:]
+        assert input.shape == brain_genome.shape[2:]
 
         # Perform convolution transform
-        output = input * self.brain_genome
+        output = input * brain_genome
         output = np.sum(output, axis=(2, 3, 4))
 
         # Map the results to -1, 0 and 1
@@ -192,40 +183,3 @@ class BrainPhenome:
         output[(output >= -map_factor) & (output <= map_factor)] = 0
 
         return output
-
-    def save_genome(self, file_path: str):
-        '''Saves model parameters to disk'''
-
-        if self.brain_genome is None:
-            raise RuntimeError('Brain genome needs to be loaded before saving model')
-
-        with open(file_path, 'wb') as f:
-            pickle.dump(self.brain_genome, f)
-
-    def load_genome(self, file_path: str):
-        '''Loads model parameters from disk'''
-        if not os.path.exists(file_path):
-            raise FileNotFoundError('Could not load model from the specified path')
-
-        with open(file_path, 'rb') as f:
-            brain_genome_array = pickle.load(f)
-            self.brain_genome = brain_genome_array
-
-    @property
-    def genome(self):
-        '''Returns the bran genome array'''
-
-        if self.brain_genome is None:
-            raise RuntimeError(
-                'Genome array needs to be loaded before it can be accessed'
-            )
-
-        return self.brain_genome
-
-    @genome.setter
-    def genome(self, genome_array):
-        '''Sets a new genome brain array'''
-
-        assert isinstance(genome_array, np.ndarray)
-
-        self.brain_genome = genome_array

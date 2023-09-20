@@ -39,27 +39,27 @@ class TestBrainGenome(unittest.TestCase):
 
 class TestSaveLoadGenome(unittest.TestCase):
     def tearDown(self):
-        clear_dir('tests/genome_files/')
+        clear_dir(c.FIT_DIR)
 
     def test_save_genome(self):
         fingers_genome = FingersGenome.random_genome()
         brain_genome = BrainGenome.random_genome()
 
-        save_genome(fingers_genome, 'tests/genome_files/f_g.pk')
-        save_genome(brain_genome, 'tests/genome_files/b_g.pk')
+        save_genome(fingers_genome, c.FIT_DIR + '/f_g.pk')
+        save_genome(brain_genome, c.FIT_DIR + '/b_g.pk')
 
-        assert os.path.exists('tests/genome_files/f_g.pk')
-        assert os.path.exists('tests/genome_files/b_g.pk')
+        assert os.path.exists(c.FIT_DIR + '/f_g.pk')
+        assert os.path.exists(c.FIT_DIR + '/b_g.pk')
 
     def test_load_genome(self):
         fingers_genome = FingersGenome.random_genome()
         brain_genome = BrainGenome.random_genome()
 
-        save_genome(fingers_genome, 'tests/genome_files/f_g_2.pk')
-        save_genome(brain_genome, 'tests/genome_files/b_g_2.pk')
+        save_genome(fingers_genome, c.FIT_DIR + '/f_g_2.pk')
+        save_genome(brain_genome, c.FIT_DIR + '/b_g_2.pk')
 
-        load_fingers_genome = load_genome('tests/genome_files/f_g_2.pk')
-        load_brain_genome = load_genome('tests/genome_files/b_g_2.pk')
+        load_fingers_genome = load_genome(c.FIT_DIR + '/f_g_2.pk')
+        load_brain_genome = load_genome(c.FIT_DIR + '/b_g_2.pk')
 
         assert np.all(fingers_genome == load_fingers_genome)
         assert np.all(brain_genome == load_brain_genome)

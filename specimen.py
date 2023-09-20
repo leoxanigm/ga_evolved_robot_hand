@@ -7,11 +7,11 @@ import pybullet as p
 from operator import add
 from collections import namedtuple
 
-from genome import FingersGenome, BrainGenome
+from genome import FingersGenome, BrainGenome, save_genome
 from phenome import FingersPhenome, BrainPhenome
 from generate_urdf import GenerateURDF
 
-from constants import GeneDesc, ROBOT_HAND, TRAINING_DIR
+import constants as c
 from helpers.pybullet_helpers import apply_rotation
 
 
@@ -62,8 +62,12 @@ class Phalanx:
         self.iterations += 1
 
     def get_performance(self):
-        '''Returns normalized values for
-        (total_distance, total_target_collisions, total_obstacle_collisions)'''
+        '''
+        Returns normalized values for
+        (total_distance, total_target_collisions, total_obstacle_collisions)
+        less distance, more performing
+        less obstacle collision, more performing
+        '''
         return (
             self._total_distance / self.iterations,
             self._target_collision / self.iterations,
@@ -74,40 +78,24 @@ class Phalanx:
 class Specimen:
     '''
     Defines a specimen and makes it ready for simulation.
-
     Args:
-        gene_description (Enum): GeneDesc enum class
-        robot_hand (str): URDF file containing the main robot hand the
-            fingers will attach to
-        generation_id (str): Generation ID for previously run evaluated specimen
-        specimen_id (str): Specimen ID for previously run evaluated specimen
+        fingers_genome: already saved fingers genome [optional]
+        brain_genome: already saved brain genome [optional]
     '''
 
     id = None
     fingers = None
-    brain = None
-    specimen_URDF = None
 
     _fitness = 0  # Total fitness of the specimen
-
-    prev_arm_angles = []  # Keeps track of previously applied angles for the arm
-
-    angle_increment = np.pi / 16  # How much angle each phalanx moves at a time
 
     def __init__(
         self,
         fingers_genome: np.ndarray = None,
         brain_genome: list = None,
-        generation_id: str = None,
-        specimen_id: str = None,
-        gene_description=GeneDesc,
-        robot_hand: str = ROBOT_HAND,
     ):
-        # Phalanx gene description Enum
-        self.gene_desc = gene_description
-        # URDF robot hand file. This contains the palm the fingers will be attached to
-        self.robot_hand = robot_hand
-
+        # Assign a unique id
+        # Use first 8 characters to avoid long file names
+        self.id = str(uuid.uuid4())[:8]
         self._fingers_genome = None
         self._brain_genome = None
 
@@ -116,14 +104,10 @@ class Specimen:
         # Increment angle for each iteration of fingers' movement
         self.angle_increment = np.pi / 32
 
-        # Assign a unique id
-        # Use first 8 characters to avoid long file names
-        self.id = str(uuid.uuid4())[:8]
+        # Keeps track of previously applied angles for the arm, helps in smooth animation
+        self.prev_arm_angles = []
 
-        if generation_id and specimen_id:  # Specimen from saved data
-            # Initialize saved specimen
-            self.__init_state(generation_id=generation_id, specimen_id=specimen_id)
-        elif fingers_genome is not None and brain_genome is not None:
+        if fingers_genome is not None and brain_genome is not None:
             # Initialize specimen from provided genomes
             self.__init_state(fingers_genome=fingers_genome, brain_genome=brain_genome)
         else:  # New specimen
@@ -137,65 +121,19 @@ class Specimen:
         generation_id: str = None,
         specimen_id: str = None,
     ):
-        if generation_id and specimen_id:
-            # ToDo
-            # Convert load_genome to helper function that returns genome
-            #
-
-
-            # Load fingers from saved pickle dump
-            self.fingers_phenome = FingersPhenome()
-            self.fingers = self.fingers_phenome.load_genome(
-                f'fit_specimen/genome_encodings/{generation_id}_fingers_{specimen_id}.pickle'
-            )
-            self._fingers_genome = self.fingers_phenome.genome
-
-            self.specimen_URDF = f'{generation_id}_{specimen_id}.urdf'
-
-            # Load brain from saved pickle dump
-            self.brain = BrainPhenome()
-            self.brain.load_genome(
-                f'fit_specimen/genome_encodings/{generation_id}_brain_{specimen_id}.pickle'
-            )
-            self._brain_genome = self.brain.genome
-
-            return
-
         if fingers_genome is not None and brain_genome is not None:
+            assert isinstance(fingers_genome, np.ndarray)
+            assert isinstance(brain_genome, np.ndarray)
+
             self._fingers_genome = fingers_genome
             self._brain_genome = brain_genome
         else:
             # Initialize random fingers genome
-            self._fingers_genome = FingersGenome.genome(self.gene_desc)
+            self._fingers_genome = FingersGenome.random_genome()
             # Initialize random brain genome
-            self._brain_genome = BrainGenome.genome(self._fingers_genome)
+            self._brain_genome = BrainGenome.random_genome()
 
-        self.fingers_phenome = FingersPhenome(self._fingers_genome)
-        self.fingers = self.fingers_phenome.phenome
-
-        self.brain = BrainPhenome(self._brain_genome)
-
-        self.write_training_urdf()
-
-    def write_training_urdf(self):
-        # Write fingers URDF definition file
-        training_folder_path = TRAINING_DIR
-        output_file = f'{self.id}.urdf'
-
-        if len(self.id) < 1:
-            raise RuntimeError('Specimen id is needed to write robot URDF file.')
-
-        assert os.path.exists(self.robot_hand)
-
-        generate_urdf = GenerateURDF(self.fingers)
-        urdf_written = generate_urdf.generate_robot_fingers(
-            self.robot_hand, training_folder_path + output_file
-        )
-
-        if urdf_written:
-            self.specimen_URDF = output_file
-        else:
-            raise RuntimeError('Can not initialize robot fingers')
+        self.fingers = FingersPhenome.genome_to_phenome(self._fingers_genome)
 
     def load_state(self, genome_link_indices: list[tuple]):
         '''Loads genome indices (fingers and phalanges) and link indices to
@@ -208,12 +146,22 @@ class Specimen:
         for (finger_index, phalanx_index), link_index in genome_link_indices:
             self._phalanges.append(Phalanx(finger_index, phalanx_index, link_index))
 
+    def save_specimen(self):
+        # Save fingers genome
+        save_genome(
+            self._fingers_genome, os.path.join(c.FIT_DIR, f'{self.id}_fingers.pk')
+        )
+        # Save brain genome
+        save_genome(self._brain_genome, os.path.join(c.FIT_DIR, f'{self.id}_brain.pk'))
+
+        return self.id
+
     def move_fingers(
         self,
         action: str,
         body_id: int,
-        get_distances: FunctionType,
-        get_collisions: FunctionType,
+        check_distances: FunctionType,
+        check_collisions: FunctionType,
         p_id: int,
     ):
         '''
@@ -224,9 +172,9 @@ class Specimen:
         Args:
             action (str): the current state of the arm
             body_id (int): the specimen body id in the PyBullet simulation
-            get_distances (function): callback function to get distance of
+            check_distances (function): callback function to get distance of
                 each phalanx from the target object
-            get_collisions (function): callback function to get collision
+            check_collisions (function): callback function to get collision
                 of a phalanx - target object and phalanx - table. It returns
                 a tuple with boolean values 0/1 for (target, table)
             p_id (int): PyBullet connected server's simulation id
@@ -238,7 +186,7 @@ class Specimen:
             for phalanx in self._phalanges:
                 if phalanx.phalanx_index == 0:
                     # Spread out the fingers
-                    phalanx.output = np.pi / 4
+                    phalanx.output = -np.pi / 4
                 else:
                     phalanx.output = 0
         elif action == 'before_pick':
@@ -246,21 +194,25 @@ class Specimen:
             for phalanx in self._phalanges:
                 phalanx.output = 0
         else:
+            # Get link indices for distance and collistions
+            distances = check_distances()
+            target_collisions = check_collisions('target')
+            obstacle_collisions = check_collisions('obstacle')
+
             for phalanx in self._phalanges:
                 link_index = phalanx.link_index
-                distance = get_distances(link_index)
-                collisions = get_collisions(link_index)
-
-                # Get collisions
-                target_collision = collisions[0]
-                obstacle_collision = collisions[1]
+                distance = target_collision = obstacle_collision = 0
+                if link_index in distances:
+                    distance = 1
+                if link_index in target_collisions:
+                    target_collision = 1
+                if link_index in obstacle_collisions:
+                    obstacle_collision = 1
 
                 # Record phalanx performance
                 phalanx.set_performance(distance, target_collision, obstacle_collision)
 
                 # Set inputs for brain
-                # We just care if there is a distance not the quantity
-                distance = 0 if distance == 0 else 1
                 phalanx.inputs = [distance, target_collision, obstacle_collision]
 
             # Get shapes to construct input np array
@@ -278,7 +230,7 @@ class Specimen:
                 inputs[f_i][p_i] = np.array(phalanx.inputs)
 
             # Get trajectories
-            outputs = self.brain.trajectories(inputs)
+            outputs = BrainPhenome.trajectories(self._brain_genome, inputs)
 
             # Populate output
             for phalanx in self._phalanges:
@@ -310,11 +262,11 @@ class Specimen:
             rotation angle (tuple[float]): [base_rotation, elbow_rotation]
         '''
         action_dict = {
-            'ready_to_pick': [0, np.pi / 4],
-            'pick': [0, np.pi / 2],
-            'move_to_drop': [np.pi, np.pi / 4],
-            'drop': [np.pi, np.pi / 2],
-            'return_to_pick': [0, np.pi / 4],
+            'ready_to_pick': [0, 0],
+            'pick': [0, np.pi / 4],
+            'move_to_drop': [np.pi, 0],
+            'drop': [np.pi, np.pi / 4],
+            'return_to_pick': [0, 0],
         }
 
         assert action in action_dict
@@ -335,35 +287,6 @@ class Specimen:
         # Keep track of applied angles
         # This is later used for smooth movement animation
         self.prev_arm_angles = action_dict[action]
-
-    def save_specimen(self, generation_id: str):
-        '''
-        Save specimen to disk. Copies the specimen URDF file to
-        fit_specimen/urdf_files folder, saves fingers and brain genome
-        to fit_specimen/genome_encodings folder.
-
-        Args:
-            generation_id (str): unique id of the generation the specimen was run
-        '''
-
-        training_urdf = f'intraining_specimen/{self.specimen_URDF}'
-        target_urdf = f'fit_specimen/urdf_files/{generation_id}_{self.specimen_URDF}'
-
-        assert os.path.exists(training_urdf)
-
-        # Move the URDF file
-        # Source: https://www.learndatasci.com/solutions/python-move-file/
-        os.replace(training_urdf, target_urdf)
-
-        # Save fingers genome matrix
-        self.fingers_phenome.save_genome(
-            f'fit_specimen/genome_encodings/{generation_id}_fingers_{self.id}.pickle'
-        )
-
-        # Save brain genome
-        self.brain.save_genome(
-            f'fit_specimen/genome_encodings/{generation_id}_brain_{self.id}.pickle'
-        )
 
     @property
     def fitness(self):

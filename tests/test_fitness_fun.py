@@ -21,7 +21,6 @@ def init_phalanges() -> list[Phalanx]:
 def populate_performance(phalanges, dis, t_coll, o_coll):
     for _ in range(5):  # 5 iterations
         for phalanx in phalanges:
-            # No distance, all collision with target, no collision with
             phalanx.set_performance(dis, t_coll, o_coll)
     return phalanges
 

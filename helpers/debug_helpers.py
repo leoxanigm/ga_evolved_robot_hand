@@ -61,3 +61,4 @@ def draw_debug_sphere(pos):
     '''Draws a small red sphere at specified position'''
     s_1 = p.loadURDF('assets/misc/sphere_small.urdf', useFixedBase=1)
     p.resetBasePositionAndOrientation(s_1, pos, [0, 0, 0, 1])
+    return s_1

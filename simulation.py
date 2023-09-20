@@ -7,61 +7,43 @@ import time
 from typing import Literal
 
 from helpers.pybullet_helpers import (
-    get_distance_of_bodies,
-    apply_rotation,
+    check_distances,
     check_collisions,
+    apply_rotation,
     get_genome_link_indices,
     check_in_target_box,
 )
+from helpers.init_sim import init_sim
+from helpers.misc_helpers import clear_dir
 
 from population import Population
 from specimen import Specimen, Phalanx
 from fitness_fun import FitnessFunction
+import constants as c
+from generate_urdf import GenerateURDF
 
 object_URDF = ['cube.urdf', 'sphere.urdf', 'cylinder.urdf']
 
 
 class Simulation:
-    def __init__(self, conn_method='DIRECT', sim_id=0):
+    def __init__(self, conn_method='DIRECT', training=True):
         self.conn_method = conn_method
-
-        if conn_method == 'DIRECT':
-            self.p_id = p.connect(p.DIRECT)
-        elif conn_method == 'GUI':
-            self.p_id = p.connect(p.GUI)
-            p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0, physicsClientId=self.p_id)
-            p.resetDebugVisualizerCamera(
-                5, 0, 200, [0, -3, -0.5], physicsClientId=self.p_id
-            )
-            # p.resetDebugVisualizerCamera(
-            #     3.26,
-            #     -74.8,
-            #     197.2,
-            #     (-1.58, -0.46, -0.13),
-            #     physicsClientId=self.p_id,
-            # )
-
-        p.resetSimulation(physicsClientId=self.p_id)
-
-        self.sim_id = sim_id
 
         # The PyBullet ID of the specimen in the simulation
         self.robot = None
-
-        # Serves as a spot where target object can be placed and
-        # as an obstacle to avoid for the fingers
-        self.table = None
-        # Target contains where the objects will be dropped
-        self.target_box = None
-
-        # List of target object ids
-        self.target_objects = []
+        if training:
+            # Initialize training simulation
+            self.p_id, self.table, self.target_objects, self.target_box = init_sim(
+                conn_method, 'training'
+            )
+        else:
+            # Initialize testing simulation
+            self.p_id, self.table, self.target_objects, self.target_box = init_sim(
+                conn_method, 'testing'
+            )
 
         # Target objects dropped in box
         self.targets_in_box = []
-
-        self.__initialize_pybullet()
-        self.__initialize_bodies()
 
     def __enter__(self):
         return self
@@ -70,53 +52,8 @@ class Simulation:
         # Disconnect physics server when simulation is done
         # Source: https://stackoverflow.com/questions/865115/how-do-i-correctly-clean-up-a-python-object
         p.disconnect(self.p_id)
-
-    def __initialize_pybullet(self):
-        # Remove everything from the current world
-        p.resetSimulation(physicsClientId=self.p_id)
-
-        # Disable file caching incase we load different URDFs with same name
-        p.setPhysicsEngineParameter(enableFileCaching=0, physicsClientId=self.p_id)
-
-        # Set downward gravity
-        p.setGravity(0, 0, -10, physicsClientId=self.p_id)
-
-    def __initialize_bodies(self):
-        # Create plane shape
-        plane_shape = p.createCollisionShape(p.GEOM_PLANE, physicsClientId=self.p_id)
-        floor = p.createMultiBody(plane_shape, plane_shape, physicsClientId=self.p_id)
-
-        # Load table to place target objects on
-        self.table = p.loadURDF(
-            'objects/table.urdf', useFixedBase=1, physicsClientId=self.p_id
-        )
-        p.resetBasePositionAndOrientation(
-            self.table, [0.8, -2, 0], [0, 0, 0, 1], physicsClientId=self.p_id
-        )
-        # Get table top position
-        table_top_z = p.getAABB(
-            self.table,
-            p.getNumJoints(self.table, physicsClientId=self.p_id) - 1,
-            physicsClientId=self.p_id,
-        )[1][2]
-
-        # Load target objects and separate them by a certain distance
-        for pos, urdf_file in enumerate(object_URDF):
-            body = p.loadURDF(f'objects/{urdf_file}', physicsClientId=self.p_id)
-
-            # For the object to sit perfectly on the table, we get the object's
-            # base z coordinate and add the table top position
-            body_top_z = p.getAABB(body, physicsClientId=self.p_id)[1][2]
-            body_z_pos = table_top_z + body_top_z
-
-            p.resetBasePositionAndOrientation(
-                body, [0.8, -pos, body_z_pos], [0, 0, 0, 1], physicsClientId=self.p_id
-            )
-            self.target_objects.append(body)
-
-        # Load target box
-        self.target_box = p.loadURDF('objects/assets/target_box.urdf', useFixedBase=1)
-        p.resetBasePositionAndOrientation(self.target_box, [-1, 0, 0], [1, 0, 0, 1])
+        # Clear training directory
+        clear_dir()
 
     def __load_next_target_object(self):
         '''Removes the current target object from the target_objects array
@@ -144,50 +81,37 @@ class Simulation:
 
         next_target = self.target_objects[0]
 
-        # Get the current position and orientation of the next target as lists
-        # getBasePositionAndOrientation() returns a tuple of tuples. Conversion
-        # to list is required so as to modify next_pos's first value
-        next_pos, next_orientation = map(
-            list,
-            p.getBasePositionAndOrientation(next_target, physicsClientId=self.p_id),
-        )
-
-        next_pos[1] = 0  # Move to target position in y direction
+        # Move target object to palm location
+        next_pos = [2.82, 1.45, 2]
 
         p.resetBasePositionAndOrientation(
             next_target,
             next_pos,
-            next_orientation,
+            [0, 0, 0, 1],
             physicsClientId=self.p_id,
         )
 
-    def __get_distances(self, link_index) -> float:
+    def __check_distances(self) -> list[int]:
         '''
         Returns a distance for a specified link in the robot hand.
-
         Args:
             link_index (int): link index in the simulation
         '''
+        return check_distances(self.robot, self.target_objects[0], self.p_id)
 
-        return get_distance_of_bodies(
-            self.robot, self.target_objects[0], link_index, self.p_id
-        )
-
-    def __get_collisions(self, link_index) -> tuple[Literal[0, 1], Literal[0, 1]]:
+    def __check_collisions(self, with_body: str) -> list[int]:
         '''
-        Checks for a contact between a phalanx - target object and
-        a phalanx - table
-
+        Checks for a contact between a phalanx with specified body
         Args:
-            link_index (int): link indices in the simulation
-
+            with_body: target object or obstacle
         Returns:
             A tuple of binary values for target and table collision
             respectively.
         '''
-        return check_collisions(
-            self.robot, self.target_objects[0], self.table, link_index, self.p_id
-        )
+        if with_body == 'target':
+            return check_collisions(self.robot, self.target_objects[0], self.p_id)
+        elif with_body == 'obstacle':
+            return check_collisions(self.robot, self.table, self.p_id)
 
     def __calc_fitness(self, phalanges: list[Phalanx]):
         picking_performance = FitnessFunction.get_picking_performance(
@@ -195,25 +119,11 @@ class Simulation:
         )
         return FitnessFunction.get_total_fitness(phalanges, picking_performance)
 
-    def run_specimen(self, specimen: Specimen, in_training=True):
-        # Load specimen
-        if in_training:
-            try:
-                urdf_file = f'intraining_specimen/{specimen.specimen_URDF}'
-                self.robot = p.loadURDF(
-                    urdf_file, useFixedBase=1, physicsClientId=self.p_id
-                )
-            except:
-                specimen.write_training_urdf()
-                urdf_file = f'intraining_specimen/{specimen.specimen_URDF}'
-                self.robot = p.loadURDF(
-                    urdf_file, useFixedBase=1, physicsClientId=self.p_id
-                )
-        else:
-            urdf_file = f'fit_specimen/urdf_files/{specimen.specimen_URDF}'
-            self.robot = p.loadURDF(
-                urdf_file, useFixedBase=1, physicsClientId=self.p_id
-            )
+    def run_specimen(self, specimen: Specimen):
+        # Load specimen urdf
+        output_file = os.path.join(c.TRAINING_DIR, f'{specimen.id}.urdf')
+        GenerateURDF.generate_robot_fingers(specimen.fingers, output_file)
+        self.robot = p.loadURDF(output_file, useFixedBase=1, physicsClientId=self.p_id)
 
         # Populate phalanx state with link index
         specimen.load_state(get_genome_link_indices(self.robot, self.p_id))
@@ -227,8 +137,8 @@ class Simulation:
             specimen.move_fingers(
                 'ready_to_pick',
                 self.robot,
-                self.__get_distances,
-                self.__get_collisions,
+                self.__check_distances,
+                self.__check_collisions,
                 self.p_id,
             )
 
@@ -239,8 +149,8 @@ class Simulation:
             specimen.move_fingers(
                 'before_pick',
                 self.robot,
-                self.__get_distances,
-                self.__get_collisions,
+                self.__check_distances,
+                self.__check_collisions,
                 self.p_id,
             )
 
@@ -250,8 +160,8 @@ class Simulation:
                 specimen.move_fingers(
                     'pick',
                     self.robot,
-                    self.__get_distances,
-                    self.__get_collisions,
+                    self.__check_distances,
+                    self.__check_collisions,
                     self.p_id,
                 )
 
@@ -265,8 +175,8 @@ class Simulation:
             specimen.move_fingers(
                 'ready_to_pick',
                 self.robot,
-                self.__get_distances,
-                self.__get_collisions,
+                self.__check_distances,
+                self.__check_collisions,
                 self.p_id,
             )
 

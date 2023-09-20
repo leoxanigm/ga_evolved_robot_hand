@@ -5,7 +5,9 @@ import numpy as np
 
 from genome import FingersGenome, BrainGenome
 from phenome import FingersPhenome, BrainPhenome
+import constants as c
 from constants import GeneDesc, Limits
+
 
 
 class TestFingersPhenome(unittest.TestCase):
@@ -23,110 +25,58 @@ class TestFingersPhenome(unittest.TestCase):
         non_zero_map = self.fingers_phenome != 0
 
         assert np.all(
-            self.fingers_phenome[:, :, GeneDesc.DIM_X][
-                non_zero_map[:, :, GeneDesc.DIM_X]
+            self.fingers_phenome[:, :, GeneDesc.RADIUS][
+                non_zero_map[:, :, GeneDesc.RADIUS]
             ]
-            >= Limits.DIM_X_LOWER
+            >= Limits.RADIUS_LOWER
         ) and np.all(
-            self.fingers_phenome[:, :, GeneDesc.DIM_X][
-                non_zero_map[:, :, GeneDesc.DIM_X]
+            self.fingers_phenome[:, :, GeneDesc.RADIUS][
+                non_zero_map[:, :, GeneDesc.RADIUS]
             ]
-            <= Limits.DIM_X_UPPER
+            <= Limits.RADIUS_UPPER
         )
         assert np.all(
-            self.fingers_phenome[:, :, GeneDesc.DIM_Y][
-                non_zero_map[:, :, GeneDesc.DIM_Y]
+            self.fingers_phenome[:, :, GeneDesc.LENGTH][
+                non_zero_map[:, :, GeneDesc.LENGTH]
             ]
-            >= Limits.DIM_Y_LOWER
+            >= Limits.LENGTH_LOWER
         ) and np.all(
-            self.fingers_phenome[:, :, GeneDesc.DIM_Y][
-                non_zero_map[:, :, GeneDesc.DIM_Y]
+            self.fingers_phenome[:, :, GeneDesc.LENGTH][
+                non_zero_map[:, :, GeneDesc.LENGTH]
             ]
-            <= Limits.DIM_Y_UPPER
-        )
-        assert np.all(
-            self.fingers_phenome[:, :, GeneDesc.DIM_Z][
-                non_zero_map[:, :, GeneDesc.DIM_Z]
-            ]
-            >= Limits.DIM_Z_LOWER
-        ) and np.all(
-            self.fingers_phenome[:, :, GeneDesc.DIM_Z][
-                non_zero_map[:, :, GeneDesc.DIM_Z]
-            ]
-            <= Limits.DIM_Z_UPPER
+            <= Limits.LENGTH_UPPER
         )
 
-        # and np.all(
-        #     self.fingers_genome[:, :, GeneDesc.DIM_X]
-        #     <= Limits.DIM_X_UPPER & non_zero_map[:, :, GeneDesc.DIM_X]
-        # )
+    def test_set_joint_origin(self):
+        '''
+        Test no two joint origins overlap
+        '''
 
-        # for i in range(len(self.fingers_phenome)):
-        #     if np.all(self.fingers_phenome[i] == 0):
-        #         break
-
-        #     for j in range(len(self.fingers_phenome[i])):
-        #         if np.all(self.fingers_phenome[i][j] == 0):
-        #             break
-
-        #         phalanx_x = self.fingers_phenome[i][j][GeneDesc.DIM_X]
-        #         phalanx_y = self.fingers_phenome[i][j][GeneDesc.DIM_Y]
-        #         phalanx_z = self.fingers_phenome[i][j][GeneDesc.DIM_Z]
-        #         assert Limits.DIM_X_LOWER <= phalanx_x <= Limits.DIM_X_UPPER
-        #         assert Limits.DIM_Y_LOWER <= phalanx_y <= Limits.DIM_Y_UPPER
-        #         assert Limits.DIM_Z_LOWER <= phalanx_z <= Limits.DIM_Z_UPPER
-
-    # def test_set_joint_origin(self):
-    #     '''
-    #     Test joint origin is at edge of palm for posterior phalanges.
-    #     Test joint origin at phalanx edge for other phalanges.
-    #     '''
-    #     for i in range(len(self.fingers_phenome)):
-    #         if np.all(self.fingers_phenome[i] == 0):
-    #             break
-
-    #         for j in range(len(self.fingers_phenome[i])):
-    #             if np.all(self.fingers_phenome[i][j] == 0):
-    #                 break
-
-    #             phalanx_x = self.fingers_phenome[i][j][GeneDesc.JOINT_ORIGIN_X]
-    #             phalanx_y = self.fingers_phenome[i][j][GeneDesc.JOINT_ORIGIN_Y]
-    #             phalanx_z = self.fingers_phenome[i][j][GeneDesc.JOINT_ORIGIN_Z]
-
-    #             if j == 0:
-    #                 assert -self.palm_dim <= phalanx_x <= self.palm_dim
-    #                 assert -self.palm_dim <= phalanx_y <= self.palm_dim
-    #             else:
-    #                 assert phalanx_x == 0
-    #                 assert phalanx_y == 0
-
-    #             # Joint attachment at z axis should be at edge. We just check if it is
-    #             # in the link length limit.
-    #             # assert Limits.DIM_Z_LOWER <= phalanx_z <= Limits.DIM_Z_UPPER
+        joint_origins = self.fingers_phenome[
+            :, 0, GeneDesc.JOINT_ORIGIN_X : GeneDesc.JOINT_ORIGIN_Z
+        ]
+        tracked = []
+        for x, y in joint_origins:
+            if not x == y == 0:
+                assert (x, y) not in tracked
+                tracked.append((x, y))
 
 
-# class TestBrainPhenome(unittest.TestCase):
-#     @given(
-#         fingers=st.integers(3, 10),
-#         phalanges=st.integers(3, 20),
-#         num_inputs=st.integers(3, 7),
-#     )
-#     def test_brain_trajectories(self, fingers, phalanges, num_inputs):
-#         fingers_genome = FingersGenome.genome(GeneDesc, rows=fingers, columns=phalanges)
-#         brain_genome = BrainGenome.genome(fingers_genome, num_inputs)
-#         brain_phenome = BrainPhenome(brain_genome)
+class TestBrainPhenome(unittest.TestCase):
+    def test_brain_trajectories(self):
+        fingers_genome = FingersGenome.random_genome()
+        brain_genome = BrainGenome.random_genome()
 
-#         inputs = np.random.randint(0, 2, size=(*brain_genome.shape[:2], num_inputs))
+        inputs = np.random.randint(0, 2, size=(*brain_genome.shape[:2], c.NUMBER_OF_INPUTS))
+        outputs = BrainPhenome.trajectories(brain_genome, inputs)
 
-#         outputs = brain_phenome.trajectories(inputs)
+        assert outputs.shape == (*brain_genome.shape[:2],)
 
-#         assert outputs.shape == (*brain_genome.shape[:2], )
+        # All zero inputs must return no rotation (0)
+        inputs = np.zeros((*brain_genome.shape[:2], c.NUMBER_OF_INPUTS))
+        outputs = BrainPhenome.trajectories(brain_genome, inputs)
 
-#         # All zero inputs must return no rotation (0)
-#         inputs = np.zeros((*brain_genome.shape[:2], num_inputs))
-#         outputs = brain_phenome.trajectories(inputs)
-
-#         assert np.all(outputs == 0)
+        assert np.all(outputs == 0)
 
 
 if __name__ == '__main__':

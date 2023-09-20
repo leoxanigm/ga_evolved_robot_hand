@@ -51,7 +51,7 @@
   </link>
 
   <joint name="forearm_joint" type="revolute">
-    <origin xyz="0 0.75 3" rpy="0 -0.7854 0" />
+    <origin xyz="0 0.75 3" rpy="0 0 0" />
     <parent link="bottom_arm_link" />
     <child link="forearm_link" />
     <axis xyz="0 1 0" />
@@ -102,4 +102,62 @@
     </inertial>
   </link>
 
+  <joint name="finger_joint_1" type="revolute">
+    <origin xyz="-0.354 0.354 0" rpy="0 0 0" />
+    <parent link="palm_link" />
+    <child link="finger_link_1" />
+    <axis xyz="-1 -1 0" />
+    <limit lower="-3.14" upper="3.14" effort="1.0" velocity="1.0" />
+  </joint>
+
+  <link name="finger_link_1">
+    <visual>
+      <origin xyz="0 0 -0.125" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.05" length="0.25"/>
+      </geometry>
+      <material name="light-gray-4">
+        <color rgba="0.9 0.9 0.9 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.125" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.05" length="0.25"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1" />
+      <inertia ixx="0.034" ixy="0.0" ixz="0.0" iyy="0.034" iyz="0.0" izz="0.034" />
+    </inertial>
+  </link>
+
+  <joint name="finger_joint_2" type="fixed">
+    <origin xyz="0 0 -0.25" rpy="0 0 0" />
+    <parent link="finger_link_1" />
+    <child link="finger_link_2" />
+  </joint>
+
+  <link name="finger_link_2">
+    <visual>
+      <origin xyz="0 0 -0.125" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.05" length="0.25"/>
+      </geometry>
+      <material name="light-gray-4">
+        <color rgba="0.9 0.9 0.9 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.125" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.05" length="0.25"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1" />
+      <inertia ixx="0.034" ixy="0.0" ixz="0.0" iyy="0.034" iyz="0.0" izz="0.034" />
+    </inertial>
+  </link>
+  
 </robot>

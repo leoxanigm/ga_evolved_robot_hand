@@ -46,6 +46,55 @@ def get_genome_link_indices(body_id, p_id) -> list[tuple]:
     return index_list
 
 
+def check_distances(body_a_id, body_b_id, p_id) -> list[int]:
+    '''
+    Checks if there is a positive distance between fingers and target
+    Args:
+        body_a_id (int): robot hand with fingers added
+        body_b_id (int): target object to be picked up
+        p_id (int): PyBullet physicsClientID
+    Returns:
+        A list of link_indices where there's +ve distance
+    '''
+    assert isinstance(body_a_id, int) and isinstance(body_b_id, int)
+    # Update simulation state
+    p.stepSimulation(physicsClientId=p_id)
+
+    distances = []
+
+    closest_points = p.getClosestPoints(body_a_id, body_b_id, 1000, physicsClientId=p_id)
+
+    for point in closest_points:
+        if point[8] > 0:
+            distances.append(point[3])
+
+    return distances
+
+
+def check_collisions(body_a_id, body_b_id, p_id) -> list[int]:
+    '''
+    Checks if there is a collision between fingers and target
+    Args:
+        body_a_id (int): robot hand with fingers added
+        body_b_id (int): target object to be picked up
+        p_id (int): PyBullet physicsClientID
+    Returns:
+        A list of link_indices where there collision with target
+    '''
+    assert isinstance(body_a_id, int) and isinstance(body_b_id, int)
+    # Update simulation state
+    p.stepSimulation(physicsClientId=p_id)
+
+    collisions = []
+
+    closest_points = p.getContactPoints(body_a_id, body_b_id, physicsClientId=p_id)
+
+    for point in closest_points:
+        collisions.append(point[3])
+
+    return collisions
+
+
 def get_distance_of_bodies(body_a_id, body_b_id, link_index, p_id) -> float:
     '''
     Calculates the distance between two PyBullet bodies, from link_index
@@ -65,6 +114,11 @@ def get_distance_of_bodies(body_a_id, body_b_id, link_index, p_id) -> float:
 
     # Update simulation state
     p.stepSimulation(physicsClientId=p_id)
+
+    #
+    # pass link length as arg
+    # substract from aabb like: draw_debug_sphere([aa[0][0], aa[0][1], aa[0][2] - (len / 2)])
+    #
 
     try:
         # phalanx_pos = p.getLinkState(body_a_id, link_index, physicsClientId=p_id)[0]
@@ -86,28 +140,28 @@ def get_distance_of_bodies(body_a_id, body_b_id, link_index, p_id) -> float:
     return distance
 
 
-def check_collisions(
-    body_a_id, body_b_id, body_c_id, link_index, p_id
-) -> tuple[Literal[0, 1], Literal[0, 1]]:
-    '''
-    Checks for collision between body_a - body_b and body_a - body_c.
-    The link to be checked in body_a is specified by link_index
-    '''
+# def check_collisions(
+#     body_a_id, body_b_id, body_c_id, link_index, p_id
+# ) -> tuple[Literal[0, 1], Literal[0, 1]]:
+#     '''
+#     Checks for collision between body_a - body_b and body_a - body_c.
+#     The link to be checked in body_a is specified by link_index
+#     '''
 
-    # Update simulation state
-    p.stepSimulation(physicsClientId=p_id)
+#     # Update simulation state
+#     p.stepSimulation(physicsClientId=p_id)
 
-    target_contact_points = p.getContactPoints(
-        body_a_id, body_b_id, link_index, physicsClientId=p_id
-    )
-    obstacle_contact_points = p.getContactPoints(
-        body_a_id, body_c_id, link_index, physicsClientId=p_id
-    )
+#     target_contact_points = p.getContactPoints(
+#         body_a_id, body_b_id, link_index, physicsClientId=p_id
+#     )
+#     obstacle_contact_points = p.getContactPoints(
+#         body_a_id, body_c_id, link_index, physicsClientId=p_id
+#     )
 
-    target_contact = int(len(target_contact_points) > 0)  # int(True) -> 1
-    obstacle_contact = int(len(obstacle_contact_points) > 0)
+#     target_contact = int(len(target_contact_points) > 0)  # int(True) -> 1
+#     obstacle_contact = int(len(obstacle_contact_points) > 0)
 
-    return target_contact, obstacle_contact
+#     return target_contact, obstacle_contact
 
 
 def apply_rotation(body_id, joint_index, target_pos, p_id=0, prev_target_pos=None):

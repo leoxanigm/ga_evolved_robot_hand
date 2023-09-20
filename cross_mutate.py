@@ -71,6 +71,7 @@ class CrossMutate:
         f_g_parent_2: np.ndarray,
         b_g_parent_2: np.ndarray,
         fit_parent_2: np.ndarray,
+        mutate_factor: float = 0.3,
     ) -> tuple[np.ndarray, np.ndarray]:
         '''
         Crosses fingers and brain genome of two parents
@@ -84,7 +85,7 @@ class CrossMutate:
             fit_parent_2: parent 2 phalanx fitness map
         '''
 
-        assert all(isinstance(arr, np.ndarray) for arr in locals().values())
+        # assert all(isinstance(arr, np.ndarray) for arr in locals().values())
 
         # Initialize children genome with zeros
         f_g_child = np.zeros(f_g_parent_1.shape)  # fingers genome
@@ -105,10 +106,15 @@ class CrossMutate:
         fit_child[fitness_mask] = fit_parent_1[fitness_mask]
         fit_child[np.invert(fitness_mask)] = fit_parent_2[np.invert(fitness_mask)]
 
-        f_g_child, b_g_child = Mutate.mutate(f_g_child, b_g_child, fit_child)
+        if mutate_factor > 0:
+            f_g_child, b_g_child = Mutate.mutate(
+                f_g_child, b_g_child, fit_child, mutate_factor
+            )
 
-        # Fit the number of child phalanges between the parents
-        f_g_child = CrossMutate.__shorten_child(f_g_parent_1, f_g_parent_2, f_g_child)
+            # Fit the number of child phalanges between the parents
+            f_g_child = CrossMutate.__shorten_child(
+                f_g_parent_1, f_g_parent_2, f_g_child
+            )
 
         return f_g_child, b_g_child
 
@@ -118,7 +124,10 @@ class Mutate:
 
     @staticmethod
     def mutate(
-        finger_genome: np.ndarray, brain_genome: np.ndarray, fit_map: np.ndarray
+        finger_genome: np.ndarray,
+        brain_genome: np.ndarray,
+        fit_map: np.ndarray,
+        mutate_factor: float,
     ) -> tuple[np.ndarray, np.ndarray]:
         '''
         Mutates supplied fingers and brain genomes by depending on their fitness
@@ -144,21 +153,22 @@ class Mutate:
                     encoding += f_mut_amount
 
         # Mutate brain genome
-        with np.nditer(fit_map, flags=['multi_index'], op_flags=['readwrite']) as it:
+        with np.nditer(fit_map, flags=['multi_index'], op_flags=['readonly']) as it:
             for f_m in it:
-                # Brain genome mutation amount
-                g_mut_amount = 0
-                if f_m > 0 and f_m <= 0.3:
-                    g_mut_amount = 0.5 / ((1 + f_m) ** 2)
-                    g_mut_amount = random.choice([-g_mut_amount, g_mut_amount])
-                if f_m > 0.3 and f_m <= 0.6:
-                    g_mut_amount = 0.2 / ((1 + f_m) ** 2)
-                    g_mut_amount = random.choice([-g_mut_amount, g_mut_amount])
-                if f_m > 0.6 and f_m < 0.85:
-                    g_mut_amount = 0.05 / ((1 + f_m) ** 2)
-                    g_mut_amount = random.choice([-g_mut_amount, g_mut_amount])
+                if random.random() < mutate_factor:
+                    # Brain genome mutation amount
+                    g_mut_amount = 0
+                    if f_m >= 0 and f_m <= 0.3:
+                        g_mut_amount = 0.01 / ((1 + f_m) ** 2)
+                        g_mut_amount = random.choice([-g_mut_amount, g_mut_amount])
+                    if f_m > 0.3 and f_m <= 0.6:
+                        g_mut_amount = 0.005 / ((1 + f_m) ** 2)
+                        g_mut_amount = random.choice([-g_mut_amount, g_mut_amount])
+                    if f_m > 0.6 and f_m < 0.85:
+                        g_mut_amount = 0.001 / ((1 + f_m) ** 2)
+                        g_mut_amount = random.choice([-g_mut_amount, g_mut_amount])
 
-                i = it.multi_index
-                brain_genome[i] += g_mut_amount
+                    i = it.multi_index
+                    brain_genome[i] += g_mut_amount
 
         return finger_genome, brain_genome

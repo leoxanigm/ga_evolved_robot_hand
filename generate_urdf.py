@@ -3,49 +3,44 @@ import copy
 import os
 import numpy as np
 
+import constants as c
 from constants import GeneDesc
-from helpers.math_functions import calculate_box_mass, moments_of_inertia_box
+from helpers.math_functions import calculate_cylinder_mass, moments_of_inertia_cylinder
 
 from genome import FingersGenome
 from phenome import FingersPhenome
 
 
 class GenerateURDF:
-    '''
-    Generates URDF robot file from fingers phenome
-
-    Args:
-        fingers_phenome: fingers genome matrix
-    '''
-
-    def __init__(self, fingers_phenome):
-        self.fingers_phenome = fingers_phenome
-
-    def generate_robot_fingers(self, robot_hand_file, output_file):
+    @staticmethod
+    def generate_robot_fingers(
+        fingers_phenome, output_file, robot_arm_file=c.ROBOT_ARM
+    ) -> bool:
         '''
-        Adds finger links and joint to a robot hand
+        Generates URDF robot file from fingers phenome
 
         Args:
-            robot_hand: base robot URDF file
+            fingers_phenome: fingers phenome matrix
+            output_file: target file of robot hands with fingers
+            robot_arm_file: base robot URDF file
 
         Returns:
             bool
         '''
-        if not os.path.exists(robot_hand_file):
-            raise FileNotFoundError('Can not read the robot base urdf file.')
+
+        if not os.path.exists(robot_arm_file):
+            raise FileNotFoundError('Can not read the robot base URDF file.')
 
         robot_hand = ET.ElementTree()
 
         try:
-            robot_hand.parse(robot_hand_file)
+            robot_hand.parse(robot_arm_file)
         except ET.ParseError:
             raise 'Could not parse URDF file, please check that it is properly formatted.'
-        except:
-            raise 'Could not parse URDF file, unknown error.'
 
         xml_root = robot_hand.getroot()
 
-        self.__populate_links_and_joints(xml_root)
+        GenerateURDF.__populate_links_and_joints(fingers_phenome, xml_root)
 
         try:
             ET.indent(robot_hand)
@@ -54,9 +49,10 @@ class GenerateURDF:
         except:
             return False
 
-    def __populate_links_and_joints(self, xml_root):
-        for i in range(len(self.fingers_phenome)):  # loop through fingers
-            finger = self.fingers_phenome[i]
+    @staticmethod
+    def __populate_links_and_joints(fingers_phenome, xml_root):
+        for i in range(len(fingers_phenome)):  # loop through fingers
+            finger = fingers_phenome[i]
 
             if np.all(finger == 0):
                 # No need to continue looping are the rest of array elements will be None
@@ -65,7 +61,7 @@ class GenerateURDF:
             parent = 'palm_link'
 
             for j in range(len(finger)):  # loop through phalanges
-                phalanx = self.fingers_phenome[i][j]
+                phalanx = fingers_phenome[i][j]
 
                 if np.all(phalanx == 0):
                     break
@@ -74,14 +70,14 @@ class GenerateURDF:
 
                 # generate link tag
                 link_tag_name = f'finger_link_{i}_{j}'
-                link_tag = self.__generate_link_tag(phalanx, link_tag_name)
+                link_tag = GenerateURDF.__generate_link_tag(phalanx, link_tag_name)
 
                 # generate joint tag
                 joint_tag_parent = parent
                 joint_tag_child = link_tag_name
                 joint_tag_name = f'finger_joint_{parent}_to_{link_tag_name}'
 
-                joint_tag = self.__generate_joint_tag(
+                joint_tag = GenerateURDF.__generate_joint_tag(
                     phalanx, joint_tag_name, joint_tag_parent, joint_tag_child
                 )
 
@@ -91,11 +87,11 @@ class GenerateURDF:
 
                 parent = link_tag_name
 
-    def __generate_link_tag(self, gene_data, name):
+    @staticmethod
+    def __generate_link_tag(phalanx, name):
         # Attributes
-        DIM_X = round(gene_data[GeneDesc.DIM_X], 3)
-        DIM_Y = round(gene_data[GeneDesc.DIM_Y], 3)
-        DIM_Z = round(gene_data[GeneDesc.DIM_Z], 3)
+        RADIUS = round(phalanx[GeneDesc.RADIUS], 3)
+        LENGTH = round(phalanx[GeneDesc.LENGTH], 3)
 
         link_tag = ET.Element('link', attrib={'name': name})
 
@@ -105,16 +101,17 @@ class GenerateURDF:
         vis_origin_tag = ET.Element(
             'origin',
             attrib={
-                'xyz': f'0 0 {DIM_Z / 2}', # 
+                'xyz': f'0 0 {-LENGTH / 2}',  # Move origin to top
                 'rpy': '0 0 0',
             },
         )
 
         vis_geom_tag = ET.Element('geometry')
         vis_box_tag = ET.Element(
-            'box',
+            'cylinder',
             attrib={
-                'size': f'{DIM_X} {DIM_Y} {DIM_Z}',
+                'radius': f'{RADIUS}',
+                'length': f'{LENGTH}',
             },
         )
         vis_geom_tag.append(vis_box_tag)
@@ -132,45 +129,21 @@ class GenerateURDF:
         # inertial tag start
         iner_tag = ET.Element('inertial')
 
-        link_mass = calculate_box_mass(
-            DIM_X,
-            DIM_Y,
-            DIM_Z,
-        )
+        link_mass = calculate_cylinder_mass(RADIUS, LENGTH)
         inertial_mass_tag = ET.Element('mass', attrib={'value': f'{link_mass}'})
 
-        (
-            link_inertia_ixx,
-            link_inertia_iyy,
-            link_inertia_izz,
-        ) = moments_of_inertia_box(
-            DIM_X,
-            DIM_Y,
-            DIM_Z,
-            link_mass,
-        )
+        mom_intertia = moments_of_inertia_cylinder(RADIUS, link_mass)
         inertial_inertia_tag = ET.Element(
             'inertia',
             attrib={
-                'ixx': '0.001',
-                'iyy': '0.001',
-                'izz': '0.001',
+                'ixx': f'{mom_intertia}',
+                'iyy': f'{mom_intertia}',
+                'izz': f'{mom_intertia}',
                 'ixy': '0',
                 'ixz': '0',
                 'iyz': '0',
             },
         )
-        # inertial_inertia_tag = ET.Element(
-        #     'inertia',
-        #     attrib={
-        #         'ixx': f'{link_inertia_ixx}',
-        #         'iyy': f'{link_inertia_iyy}',
-        #         'izz': f'{link_inertia_izz}',
-        #         'ixy': '0',
-        #         'ixz': '0',
-        #         'iyz': '0',
-        #     },
-        # )
 
         iner_tag.append(inertial_mass_tag)
         iner_tag.append(inertial_inertia_tag)
@@ -182,14 +155,15 @@ class GenerateURDF:
 
         return link_tag
 
-    def __generate_joint_tag(self, gene_data, name, parent, child, type='revolute'):
+    @staticmethod
+    def __generate_joint_tag(phalanx, name, parent, child, type='revolute'):
         # Attributes
-        JOINT_ORIGIN_X = round(gene_data[GeneDesc.JOINT_ORIGIN_X], 3)
-        JOINT_ORIGIN_Y = round(gene_data[GeneDesc.JOINT_ORIGIN_Y], 3)
-        JOINT_ORIGIN_Z = round(gene_data[GeneDesc.JOINT_ORIGIN_Z], 3)
-        JOINT_AXIS_X = round(gene_data[GeneDesc.JOINT_AXIS_X], 3)
-        JOINT_AXIS_Y = round(gene_data[GeneDesc.JOINT_AXIS_Y], 3)
-        JOINT_AXIS_Z = round(gene_data[GeneDesc.JOINT_AXIS_Z], 3)
+        JOINT_ORIGIN_X = round(phalanx[GeneDesc.JOINT_ORIGIN_X], 3)
+        JOINT_ORIGIN_Y = round(phalanx[GeneDesc.JOINT_ORIGIN_Y], 3)
+        JOINT_ORIGIN_Z = round(phalanx[GeneDesc.JOINT_ORIGIN_Z], 3)
+        JOINT_AXIS_X = round(phalanx[GeneDesc.JOINT_AXIS_X], 3)
+        JOINT_AXIS_Y = round(phalanx[GeneDesc.JOINT_AXIS_Y], 3)
+        JOINT_AXIS_Z = round(phalanx[GeneDesc.JOINT_AXIS_Z], 3)
 
         joint_tag = ET.Element('joint', attrib={'name': str(name), 'type': type})
 

@@ -5,6 +5,7 @@ import sys
 import math
 
 from helpers.pybullet_helpers import get_distance_of_bodies
+from helpers.debug_helpers import draw_debug_boundary_box, draw_debug_sphere
 
 if len(sys.argv) == 2 and sys.argv[1] == 'DIRECT':
     p.connect(p.DIRECT)

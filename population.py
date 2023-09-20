@@ -8,8 +8,6 @@ from specimen import Specimen
 from fitness_fun import FitnessFunction
 from cross_mutate import CrossMutate, Mutate
 
-from constants import GeneDesc, ROBOT_HAND
-
 
 Fits = namedtuple('Fits', ('f', 's'))
 '''Tuple to hold state of fit specimen. f - fitness, s - specimen'''
@@ -54,39 +52,49 @@ class Population:
             parent_1 = self.top_fits[i]
             parent_2 = self.top_fits[i + 1]
 
+            f_g_parent_1 = parent_1.fingers_genome
+            b_g_parent_1 = parent_1.brain_genome
+            f_g_parent_2 = parent_2.fingers_genome
+            b_g_parent_2 = parent_2.brain_genome
+
             # Get fitness maps for both parents
             fit_map_p_1 = FitnessFunction.get_fitness_map(
-                parent_1.phalanges, parent_1.fingers.shape
+                parent_1.phalanges, f_g_parent_1.shape
             )
             fit_map_p_2 = FitnessFunction.get_fitness_map(
-                parent_2.phalanges, parent_2.fingers.shape
+                parent_2.phalanges, f_g_parent_2.shape
             )
 
             # Cross the parents to create a new child
             f_g_child, b_g_child = CrossMutate.cross_mutate_genomes(
-                parent_1.fingers,
-                parent_1.brain.genome,
+                f_g_parent_1,
+                b_g_parent_1,
                 fit_map_p_1,
-                parent_2.fingers,
-                parent_2.brain.genome,
+                f_g_parent_2,
+                b_g_parent_2,
                 fit_map_p_2,
+                mutate_factor=1 - parent_1.fitness,
             )
-
-            t_g = deepcopy(parent_1.brain.genome)
 
             # Mutate parents
-            parent_1_f_g_mut, parent_1_b_g_mut = Mutate.mutate(
-                parent_1.fingers, parent_1.brain.genome, fit_map_p_1
+            f_g_parent_1, b_g_parent_1 = Mutate.mutate(
+                f_g_parent_1,
+                b_g_parent_1,
+                fit_map_p_1,
+                mutate_factor=1 - parent_1.fitness,
             )
-            parent_2_f_g_mut, parent_2_b_g_mut = Mutate.mutate(
-                parent_2.fingers, parent_2.brain.genome, fit_map_p_2
+            f_g_parent_2, b_g_parent_2 = Mutate.mutate(
+                f_g_parent_2,
+                b_g_parent_2,
+                fit_map_p_2,
+                mutate_factor=1 - parent_2.fitness,
             )
 
             mut_parent_1 = Specimen(
-                fingers_genome=parent_1_f_g_mut, brain_genome=parent_1_b_g_mut
+                fingers_genome=f_g_parent_1, brain_genome=b_g_parent_1
             )
             mut_parent_2 = Specimen(
-                fingers_genome=parent_2_f_g_mut, brain_genome=parent_2_b_g_mut
+                fingers_genome=f_g_parent_2, brain_genome=b_g_parent_2
             )
             child = Specimen(fingers_genome=f_g_child, brain_genome=b_g_child)
 
