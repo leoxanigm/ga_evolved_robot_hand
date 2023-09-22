@@ -2,7 +2,7 @@ _*
 __*
 .*
 .hypothesis
-__pycache__
+__pycache__/
 venv
 intraining_specimen
 pybullet_starter_mod.py
