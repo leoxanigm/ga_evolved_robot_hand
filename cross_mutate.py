@@ -2,6 +2,7 @@ import numpy as np
 from copy import deepcopy
 import random
 import math
+import warnings
 
 from specimen import Phalanx
 
@@ -155,6 +156,7 @@ class Mutate:
         # Mutate brain genome
         with np.nditer(fit_map, flags=['multi_index'], op_flags=['readonly']) as it:
             for f_m in it:
+                # Point mutation
                 if random.random() < mutate_factor:
                     # Brain genome mutation amount
                     g_mut_amount = 0
@@ -170,5 +172,23 @@ class Mutate:
 
                     i = it.multi_index
                     brain_genome[i] += g_mut_amount
+
+        # Swap mutation
+        # If the finger is severely underperforming, replace it with new
+        # random encoding
+
+        # Ignore Mean of empty slice numpy waring
+        warnings.filterwarnings('ignore')
+        # Convert zeros in fitness map to exclude them average calculation
+        fit_map[fit_map == 0] = np.nan
+        # Get average fitness for each entire finger
+        fit_map = np.nanmean(fit_map, axis=1)
+
+        for i in range(len(fit_map)):
+            if fit_map[i] < 0.2:
+                if random.random() < 0.5:  # New random genome
+                    brain_genome[i] = np.random.uniform(
+                        low=-0.5, high=0.5, size=brain_genome[i].shape
+                    )
 
         return finger_genome, brain_genome

@@ -42,8 +42,12 @@ class FitnessFunction:
 
         distance, t_collision, o_collision = grabbing_performance
 
-        distance = 1 / np.square((1 + distance))  # when d = 0, d fitness = 1
-        o_collision = 1 / (1 + o_collision)
+        # distance = 1 / ((1 + distance) ** 5)  # when d = 0, d fitness = 1
+        # o_collision = 1 / ((1 + o_collision) ** 5)
+        distance = np.exp(-distance * c.NUMBER_OF_INPUTS)
+        o_collision = np.exp(-o_collision) / c.NUMBER_OF_INPUTS
+
+        t_collision *= 2
 
         return (distance + t_collision + o_collision) / 3
 
@@ -66,7 +70,7 @@ class FitnessFunction:
         return (grabbing_performances + picking_performance) / (1 + c.NUMBER_OF_INPUTS)
 
     @staticmethod
-    def get_fitness_map(phalanges: list[Phalanx], shape: tuple) -> np.ndarray:
+    def get_fitness_map(phalanges: list[Phalanx], genome_shape: tuple) -> np.ndarray:
         '''
         Returns a fitness map for the list of phalanges based on genome shape
 
@@ -75,7 +79,7 @@ class FitnessFunction:
             shape: shape of genome encoding the fitness map should imitate
         '''
 
-        fitness_map = np.zeros(shape[:2])
+        fitness_map = np.zeros(genome_shape[:2])
         for phalanx in phalanges:
             f_i = phalanx.finger_index
             j_i = phalanx.phalanx_index

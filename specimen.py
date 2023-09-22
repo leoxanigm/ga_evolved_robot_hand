@@ -193,8 +193,9 @@ class Specimen:
             # Move the phalanges in a straight position
             for phalanx in self._phalanges:
                 phalanx.output = 0
-        else:
-            # Get link indices for distance and collistions
+        elif action == 'pick':
+            time.sleep(0.1)
+            # Get link indices for distance and collistions, for input
             distances = check_distances()
             target_collisions = check_collisions('target')
             obstacle_collisions = check_collisions('obstacle')
@@ -208,9 +209,6 @@ class Specimen:
                     target_collision = 1
                 if link_index in obstacle_collisions:
                     obstacle_collision = 1
-
-                # Record phalanx performance
-                phalanx.set_performance(distance, target_collision, obstacle_collision)
 
                 # Set inputs for brain
                 phalanx.inputs = [distance, target_collision, obstacle_collision]
@@ -232,12 +230,29 @@ class Specimen:
             # Get trajectories
             outputs = BrainPhenome.trajectories(self._brain_genome, inputs)
 
+            # Get link indices for distance and collistions, to get performance
+            distances = check_distances()
+            target_collisions = check_collisions('target')
+            obstacle_collisions = check_collisions('obstacle')
+
             # Populate output
             for phalanx in self._phalanges:
                 f_i = phalanx.finger_index
                 p_i = phalanx.phalanx_index
 
                 phalanx.output += outputs[f_i][p_i] * self.angle_increment
+
+                link_index = phalanx.link_index
+                distance = target_collision = obstacle_collision = 0
+                if link_index in distances:
+                    distance = 1
+                if link_index in target_collisions:
+                    target_collision = 1
+                if link_index in obstacle_collisions:
+                    obstacle_collision = 1
+
+                # Record phalanx performance
+                phalanx.set_performance(distance, target_collision, obstacle_collision)
 
         link_indices = [p.link_index for p in self._phalanges]
         target_angles = [p.output for p in self._phalanges]

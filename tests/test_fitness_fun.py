@@ -32,7 +32,7 @@ class TestSpecimen(unittest.TestCase):
         phalanges = init_phalanges()
         phalanges = populate_performance(phalanges, 0, 1, 0)
         fitness = FitnessFunction.get_total_fitness(phalanges, 3)
-        assert fitness == 1
+        assert fitness > 1
 
     def test_all_distance(self):
         '''Somewhat performing specimen.
@@ -57,7 +57,7 @@ class TestSpecimen(unittest.TestCase):
         phalanges = init_phalanges()
         phalanges = populate_performance(phalanges, 0, 1, 0)
         fitness_map = FitnessFunction.get_fitness_map(phalanges, (7, 10, 9))
-        assert np.all(fitness_map == 1)
+        assert np.all(fitness_map > 1)
 
     def test_fitness_map_least_fit(self):
         '''Test fitness map of an ideal specimen'''

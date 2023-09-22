@@ -1,18 +1,17 @@
 import time
+import numpy as np
+from copy import deepcopy
+import warnings
 
 from simulation import Simulation
 from specimen import Specimen
-from constants import GeneDesc
-
 from fitness_fun import FitnessFunction
+from cross_mutate import Mutate
 
-start = time.time()
+warnings.filterwarnings('ignore')
 
-specimen = Specimen()
-simulation = Simulation(conn_method='GUI')
-# simulation = Simulation()
-simulation.run_specimen(specimen)
-
-# print('#######################################')
-# print(time.time() - start)
-# print('#######################################')
+# conn_method = 'GUI'
+conn_method = 'DIRECT'
+with Simulation(conn_method=conn_method) as simulation:
+    specimen = Specimen()
+    simulation.run_specimen(specimen)

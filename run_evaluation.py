@@ -24,8 +24,8 @@ write_csv(f'log/{t_log}_log.csv', ['iteration_id', 'total_run_time(s)', 'pop_cou
 written_files.append(f'log/{t_log}_log.csv')
 
 try:
-    for j in range(1):  # run 50 evaluations
-        generation_count = 10  # for 50 generations
+    for j in range(50):  # run 50 evaluations
+        generation_count = 20  # for 50 generations
         population_count = 100  # of 100 specimen each
 
         run_id = str(uuid4())[:8]
@@ -60,7 +60,7 @@ try:
 
             # Save the fittest specimen of this generation
             saved_specimen_id = ''
-            if fittest[0].f > 0.8:
+            if fittest[0].f > 0.85:
                 saved_specimen_id = fittest[0].s.save_specimen()
 
             print(f'Max fitness for generation {i} = {fittest[0].f}')
